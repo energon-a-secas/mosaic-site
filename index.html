@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mosaic | Photo Collage Maker</title>
+  <meta name="description" content="Build photo collages that stay editable: change the grid, shape or column count at any time without losing the photos you already placed">
+  <meta property="og:title" content="Mosaic: Photo Collage Maker">
+  <meta property="og:description" content="Change the layout after you add the photos. Nothing gets lost">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://mosaic.neorgon.com/">
+  <meta property="og:site_name" content="Neorgon">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Mosaic: Photo Collage Maker">
+  <meta name="twitter:description" content="Change the layout after you add the photos. Nothing gets lost">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://mosaic.neorgon.com/">
+  <meta property="og:locale" content="en_US">
+  <meta name="theme-color" content="#040714">
+  <!-- og:image: uncomment when social preview image is ready (1200x630 PNG)
+  <meta property="og:image" content="https://mosaic.neorgon.com/og-preview.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630"> -->
+  <link rel="icon" type="image/x-icon" href="https://cdn.neorgon.org/v1.0.0/favicon.ico" />
+  <!-- Fleet design tokens — canonical, do not redeclare locally (PROJECTS.md section 5) -->
+  <link rel="stylesheet" href="https://cdn.neorgon.org/v1.0.0/styles/base.css">
+  <link rel="stylesheet" href="css/style.css">
+  <!-- Neorgon Header Kit (vendored; ?header=live swaps CSS to CDN). Keep after style.css — the kit owns the header. -->
+  <script>(function(){var m=location.search.match(/[?&]theme=([\w-]+)/)||document.cookie.match(/(?:^|;\s*)neo_theme=([\w-]+)/);if(m&&m[1]!=='default')document.documentElement.dataset.theme=decodeURIComponent(m[1]);})();</script>
+  <link rel="stylesheet" href="css/neorgon-header.css">
+  <link rel="stylesheet" href="css/neorgon-themes.css">
+  <link rel="stylesheet" href="https://cdn.neorgon.org/v1.0.0/header/season.css">
+  <script defer src="js/neorgon-header.js"></script>
+  <!-- Neorgon Footer Kit (vendored). Pins the footer to the viewport floor on short
+       pages and builds the meta bar + back-to-top. See packages/neorgon-ui/footer/README.md.
+       Optional stamps: <meta name="neo-repo"|"neo-version"|"neo-updated"> -->
+  <link rel="stylesheet" href="css/neorgon-footer.css">
+  <script defer src="js/neorgon-footer.js"></script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "TITLE",
+    "description": "DESCRIPTION",
+    "url": "https://mosaic.neorgon.com/",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Any",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "author": { "@type": "Organization", "name": "Neorgon", "url": "https://neorgon.com/" }
+  }
+  </script>
+</head>
+<body>
+
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <!-- Neorgon Header Kit contract (packages/neorgon-ui/header/README.md).
+       data-header-mode: hub (glass) | content (sticky gradient) | app (slim, auto-hides on scroll).
+       Pick content for learning/content sites, app for tool-dense sites. -->
+  <header class="header-bar" data-header-mode="app">
+    <div class="header-logo">
+      <a href="https://neorgon.com/" target="_blank" rel="noopener noreferrer">
+        <img src="https://cdn.neorgon.org/v1.0.0/energon-classic-logo.png" class="header-logo-img" alt="Logo">
+      </a>
+      <!-- PATTERN: title links to self (root or #home) so clicking the name resets the view -->
+      <a href="./" class="header-title-link">
+        <h1>Mosaic</h1>
+        <div class="header-subtitle">Collages you can re-layout at any time</div>
+      </a>
+    </div>
+
+    <!-- .header-right owns margin-left:auto; home icon is always last. -->
+    <div class="header-right">
+      <!-- Action buttons (omit .header-actions entirely if the site has none).
+           Mark the 1–2 primary controls with data-keep-mobile — everything else
+           collapses into the ⋯ overflow menu at ≤700px (handled by neorgon-header.js).
+      <div class="header-actions">
+        <button class="btn btn--ghost btn--sm" id="someFeatureBtn" data-keep-mobile>Feature</button>
+        <button class="btn btn--ghost btn--sm" id="secondaryBtn">Secondary</button>
+      </div>
+      -->
+
+      <!-- Auth toggle (Pattern B/C sites): lives in .header-right, keeps data-keep-mobile.
+      <button class="auth-toggle" id="authToggle" aria-label="Account" data-keep-mobile>
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <circle cx="12" cy="12" r="9"/>
+          <circle cx="12" cy="10" r="3"/>
+          <path d="M6 19c1.2-3 3.5-4 6-4s4.8 1 6 4"/>
+        </svg>
+      </button>
+      -->
+
+      <a class="header-home" href="https://neorgon.com/" title="neorgon.com" aria-label="Neorgon home">
+        <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+          <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+        </svg>
+      </a>
+    </div>
+  </header>
+
+  <!-- Auth panel (uncomment when using Pattern B or C, add auth event handlers to js/events.js) -->
+  <!--
+  <div class="auth-panel" id="authPanel">
+    <div class="auth-panel-inner">
+      <div id="authGate">
+        <div class="auth-tabs">
+          <button class="auth-tab active" data-tab="login">Log In</button>
+          <button class="auth-tab" data-tab="register">Register</button>
+        </div>
+        <div class="auth-form" id="authLoginForm">
+          <input type="text" id="authLoginUser" placeholder="Username" autocomplete="username" maxlength="20">
+          <input type="password" id="authLoginPass" placeholder="Password" autocomplete="current-password">
+          <button class="auth-submit" id="authLoginBtn">Log In</button>
+        </div>
+        <div class="auth-form" id="authRegisterForm" hidden>
+          <input type="text" id="authRegUser" placeholder="Choose a username" autocomplete="username" maxlength="20">
+          <input type="password" id="authRegPass" placeholder="Choose a password" autocomplete="new-password">
+          <button class="auth-submit" id="authRegBtn">Register</button>
+        </div>
+      </div>
+      <div id="authUser" hidden>
+        <span class="auth-username" id="authUsername"></span>
+        <button class="auth-logout" id="authLogout">Log out</button>
+      </div>
+    </div>
+  </div>
+  <div class="auth-divider"></div>
+  -->
+
+  <!-- Main content — replace with your app's HTML structure -->
+  <main id="main">
+    <input type="file" id="file" accept="image/*" multiple hidden>
+
+    <section class="board" aria-label="Collage editor">
+
+      <aside class="rail" aria-label="Layout controls">
+        <div class="grp">
+          <h2 class="grp-t">Layout</h2>
+          <div class="chips" role="group" aria-label="Layout style">
+            <button type="button" class="chip" data-layout="grid">grid</button>
+            <button type="button" class="chip" data-layout="masonry">masonry</button>
+            <button type="button" class="chip" data-layout="strip">strip</button>
+            <button type="button" class="chip" data-layout="heart">heart</button>
+            <button type="button" class="chip" data-layout="circle">circle</button>
+            <button type="button" class="chip" data-layout="diamond">diamond</button>
+          </div>
+          <p class="hint">Switch whenever you like. Your photos and their framing carry over.</p>
+        </div>
+
+        <div class="grp" data-cols-row>
+          <label class="lab" for="cols">Columns <b data-cols-out>3</b></label>
+          <input id="cols" type="range" min="1" max="8" step="1" data-param="cols">
+        </div>
+
+        <div class="grp">
+          <label class="lab" for="ratio">Canvas</label>
+          <select id="ratio" data-param="ratio">
+            <option value="1:1">Square 1:1</option>
+            <option value="4:5" selected>Portrait 4:5</option>
+            <option value="9:16">Story 9:16</option>
+            <option value="3:2">Landscape 3:2</option>
+            <option value="16:9">Wide 16:9</option>
+          </select>
+        </div>
+
+        <div class="grp">
+          <label class="lab" for="gap">Gap</label>
+          <input id="gap" type="range" min="0" max="48" step="1" data-param="gap">
+          <label class="lab" for="radius">Corner</label>
+          <input id="radius" type="range" min="0" max="48" step="1" data-param="radius">
+          <label class="lab" for="pad">Margin</label>
+          <input id="pad" type="range" min="0" max="80" step="1" data-param="pad">
+          <label class="lab" for="bg">Background</label>
+          <input id="bg" type="color" data-param="background">
+        </div>
+
+        <div class="grp">
+          <h2 class="grp-t">Export</h2>
+          <div class="chips">
+            <button type="button" class="chip" data-export="800">800px</button>
+            <button type="button" class="chip" data-export="1600">1600px</button>
+            <button type="button" class="chip" data-export="3000">3000px</button>
+          </div>
+          <p class="hint">Thumbnail, web, and print. Same render path as the preview.</p>
+        </div>
+      </aside>
+
+      <div class="stage-wrap">
+        <div class="stage-box">
+          <canvas id="stage" aria-label="Collage preview"></canvas>
+          <button type="button" id="empty" class="empty">
+            <strong>Drop photos here</strong>
+            <span>or click to choose. Layout stays changeable afterwards.</span>
+          </button>
+        </div>
+      </div>
+
+      <aside class="side" aria-label="Photos and editing">
+        <div class="side-head">
+          <button type="button" class="btn btn--sm" data-act="add">Add photos</button>
+          <span class="count" id="count">no photos yet</span>
+          <button type="button" class="btn btn--ghost btn--sm" data-act="clear">Clear</button>
+        </div>
+        <ul id="strip" class="strip" aria-label="Photo pool"></ul>
+
+        <div id="inspector" class="ins" hidden>
+          <h2 class="grp-t" data-ins-name>Photo</h2>
+          <label class="lab" for="zoom">Zoom</label>
+          <input id="zoom" type="range" min="1" max="4" step="0.01" data-tf="zoom">
+          <label class="lab" for="ox">Nudge across</label>
+          <input id="ox" type="range" min="-1" max="1" step="0.01" data-tf="ox">
+          <label class="lab" for="oy">Nudge down</label>
+          <input id="oy" type="range" min="-1" max="1" step="0.01" data-tf="oy">
+          <label class="lab" for="rot">Rotate</label>
+          <input id="rot" type="range" min="-180" max="180" step="1" data-tf="rot">
+
+          <div class="chips">
+            <button type="button" class="chip" data-flip="h">flip H</button>
+            <button type="button" class="chip" data-flip="v">flip V</button>
+            <button type="button" class="chip" data-act="reset">reset</button>
+          </div>
+
+          <label class="lab">Filter</label>
+          <div class="chips" data-filters></div>
+
+          <label class="lab" for="tol">Background tolerance</label>
+          <input id="tol" type="range" min="8" max="90" step="1" value="32" data-tol>
+          <div class="chips">
+            <button type="button" class="chip chip--go" data-act="cutout">Remove background</button>
+            <button type="button" class="chip" data-act="restore" hidden>Undo cutout</button>
+          </div>
+          <p class="hint">Flood fill from the edges. Strong on flat backdrops, weak on hair.</p>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <footer class="neo-footer" data-footer-mode="minimal">
+    Your photos never leave this device. Everything here runs in the browser.
+  </footer>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
