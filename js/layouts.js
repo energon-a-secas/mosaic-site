@@ -7,20 +7,51 @@
 
 const cell = (x, y, w, h, extra = {}) => ({ x, y, w, h, ...extra });
 
-function grid(n, { cols, gap, pad }) {
-  const c = Math.max(1, cols);
-  const rows = Math.max(1, Math.ceil(n / c));
-  const out = [];
-  for (let i = 0; i < c * rows; i++) {
-    const cx = i % c, cy = Math.floor(i / c);
-    out.push(cell(
-      pad + cx * ((1 - 2 * pad + gap) / c),
-      pad + cy * ((1 - 2 * pad + gap) / rows),
-      (1 - 2 * pad + gap) / c - gap,
-      (1 - 2 * pad + gap) / rows - gap,
-    ));
+// Grid with span packing. A photo marked as a hero occupies a 2x2 block and the
+// rest flow around it, which is the single most-asked collage feature.
+//
+// `spans` carries shape only, never photos (contract 1a). The packer walks a
+// row-major occupancy map and drops each item in the first slot that fits; a 2x2
+// that cannot fit the remaining width degrades to 1x1 rather than overflowing.
+function grid(n, { cols, gap, pad }, spans = []) {
+  const C = Math.max(1, cols);
+  const occ = [];
+  const free = (r, c, w, h) => {
+    if (c + w > C) return false;
+    for (let y = r; y < r + h; y++) for (let x = c; x < c + w; x++) {
+      if (occ[y] && occ[y][x]) return false;
+    }
+    return true;
+  };
+  const fill = (r, c, w, h) => {
+    for (let y = r; y < r + h; y++) {
+      occ[y] = occ[y] || [];
+      for (let x = c; x < c + w; x++) occ[y][x] = 1;
+    }
+  };
+
+  const placed = [];
+  for (let i = 0; i < n; i++) {
+    let w = spans[i] === 2 ? 2 : 1, h = w;
+    if (w > C) { w = 1; h = 1; }
+    let r = 0, done = false;
+    while (!done) {
+      for (let c = 0; c <= C - w; c++) {
+        if (free(r, c, w, h)) { fill(r, c, w, h); placed.push({ r, c, w, h }); done = true; break; }
+      }
+      if (!done) {
+        if (w > 1) { w = 1; h = 1; }   // degrade before growing the canvas
+        else r++;
+      }
+    }
   }
-  return out.slice(0, Math.max(n, 1));
+
+  const rows = Math.max(1, ...placed.map((p) => p.r + p.h));
+  const cw = (1 - 2 * pad + gap) / C;
+  const ch = (1 - 2 * pad + gap) / rows;
+  return placed.map((p) => cell(
+    pad + p.c * cw, pad + p.r * ch, p.w * cw - gap, p.h * ch - gap,
+  ));
 }
 
 // Column-balanced: each photo goes to the currently shortest column, so a mixed
@@ -139,14 +170,39 @@ const diamond = (n, p) => onCurve(n, (t) => {
   return { x: x1 + (x2 - x1) * f, y: y1 + (y2 - y1) * f };
 }, p);
 
-const FNS = { grid, masonry, strip, heart, circle, diamond };
+const star = (n, p) => onCurve(n, (t) => {
+  // Five-pointed outline: radius alternates between the tips and the inner well.
+  const a = t * Math.PI * 2 - Math.PI / 2;
+  const k = (t * 10) % 2 < 1 ? 1 : 0.45;
+  return { x: Math.cos(a) * k, y: Math.sin(a) * k };
+}, p);
 
-/** Cells for `n` photos. Pure: same inputs, same cells, no state, no photos. */
-export function computeCells(n, layout, params) {
+const spiral = (n, p) => onCurve(n, (t) => {
+  const turns = 2.4, a = t * Math.PI * 2 * turns;
+  const r = 0.14 + t * 0.86;
+  return { x: Math.cos(a) * r, y: Math.sin(a) * r };
+}, p);
+
+const wave = (n, p) => onCurve(n, (t) => ({
+  x: t * 2 - 1, y: Math.sin(t * Math.PI * 2) * 0.55,
+}), p);
+
+const FNS = { grid, masonry, strip, heart, circle, diamond, star, spiral, wave };
+
+/**
+ * Cells for `n` photos. Pure: same inputs, same cells, no state, no photos.
+ * `spans` is shape only (contract 1a) and is ignored by every layout but grid.
+ */
+export function computeCells(n, layout, params, spans = []) {
   const fn = FNS[layout] || grid;
   const p = { cols: params.cols, gap: params.gap / 400, pad: params.pad / 400 };
-  return fn(Math.max(n, 1), p);
+  return fn(Math.max(n, 1), p, spans);
 }
+
+/** Layouts where a column count is meaningful. */
+export const USES_COLS = ['grid', 'masonry'];
+/** Layouts where a photo can be a 2x2 hero. */
+export const USES_SPAN = ['grid'];
 
 /** Canvas aspect, from the `w:h` preset. */
 export function aspect(ratio) {

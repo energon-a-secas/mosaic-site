@@ -6,7 +6,7 @@
 // app refuses. Here the pool is the truth, the layout is a pure function of how
 // many photos there are, and placement is re-derived on every change.
 
-export const LAYOUTS = ['grid', 'masonry', 'strip', 'heart', 'circle', 'diamond'];
+export const LAYOUTS = ['grid', 'masonry', 'strip', 'heart', 'circle', 'diamond', 'star', 'spiral', 'wave'];
 
 export const state = {
   pool: [],              // Photo[] — ordered, stable ids, layout-agnostic
@@ -18,12 +18,19 @@ export const state = {
   nextId: 1,
 };
 
-export function addPhoto({ bitmap, name, w, h }) {
+export const freshTf = () => ({
+  zoom: 1, ox: 0, oy: 0, rot: 0, flipH: false, flipV: false, filter: 'none',
+  adj: { bright: 100, contrast: 100, sat: 100 },
+});
+
+export function addPhoto({ bitmap, name, w, h, blob }) {
   const photo = {
     id: `p${state.nextId++}`,
     name, bitmap, w, h,
+    blob,                // kept for persistence; bitmaps cannot be stored
+    span: 1,             // 2 = a 2x2 hero block (contract 1a)
     // Contract 2: framing lives on the photo, so it survives every layout change.
-    tf: { zoom: 1, ox: 0, oy: 0, rot: 0, flipH: false, flipV: false, filter: 'none' },
+    tf: freshTf(),
     cut: null,           // background-removed bitmap, when the user has made one
   };
   state.pool.push(photo);
@@ -74,3 +81,18 @@ export function swapCells(a, b, placement) {
 
 export const byId = (id) => state.pool.find((p) => p.id === id) || null;
 export const selectedPhoto = () => byId(state.selected);
+
+
+/** Shape-only span list for the layout engine, in placement order (contract 1a). */
+export function spansFor(placement) {
+  return placement.map((p) => (p && p.span === 2 ? 2 : 1));
+}
+
+/** Reorder helper used by shuffle: Fisher-Yates over the pool. */
+export function shufflePool() {
+  for (let i = state.pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [state.pool[i], state.pool[j]] = [state.pool[j], state.pool[i]];
+  }
+  state.overrides.clear();
+}

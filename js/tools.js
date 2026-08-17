@@ -78,3 +78,48 @@ export async function makeThumb(img, max = 200) {
   cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
   return createImageBitmap(cv);
 }
+
+/**
+ * Export every photo as its own square thumbnail.
+ *
+ * This is the "make thumbnails" half of the request, and it is a different job
+ * from exporting the collage: each photo gets cropped to a square by its own
+ * framing, so a batch of product shots comes out uniform. Downloads are staggered
+ * because browsers throttle or silently drop a burst of them.
+ */
+export async function batchThumbnails(pool, size, onEach) {
+  const { filterString } = await import('./compose.js');
+  let n = 0;
+  for (const p of pool) {
+    const img = p.cut || p.bitmap;
+    const cv = document.createElement('canvas');
+    cv.width = size; cv.height = size;
+    const c = cv.getContext('2d');
+    c.imageSmoothingQuality = 'high';
+    c.filter = filterString(p.tf);
+    c.save();
+    c.translate(size / 2, size / 2);
+    c.rotate((p.tf.rot * Math.PI) / 180);
+    c.scale(p.tf.flipH ? -1 : 1, p.tf.flipV ? -1 : 1);
+    const s = Math.max(size / img.width, size / img.height) * p.tf.zoom;
+    c.drawImage(img, -img.width * s / 2 + p.tf.ox * size,
+      -img.height * s / 2 + p.tf.oy * size, img.width * s, img.height * s);
+    c.restore();
+    const blob = await new Promise((r) => cv.toBlob(r, 'image/png', 0.94));
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${p.name.replace(/\.[^.]+$/, '')}-${size}.png`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    onEach?.(++n, pool.length);
+    await new Promise((r) => setTimeout(r, 320));
+  }
+  return n;
+}
+
+/** Crop a photo to an aspect by adjusting its own zoom, non-destructively. */
+export function fitAspect(photo, cellAr) {
+  const ar = photo.bitmap.width / photo.bitmap.height;
+  photo.tf.zoom = ar > cellAr ? 1 : cellAr / ar;
+  photo.tf.ox = 0; photo.tf.oy = 0;
+}

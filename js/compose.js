@@ -11,6 +11,20 @@ const FILTERS = {
 };
 export const FILTER_NAMES = Object.keys(FILTERS);
 
+/**
+ * A preset and the numeric sliders compose into one filter string rather than
+ * fighting: the preset sets the look, the sliders trim it. Identity values are
+ * dropped so an untouched photo pays no filter cost at all.
+ */
+export function filterString(tf) {
+  const a = tf.adj || { bright: 100, contrast: 100, sat: 100 };
+  const parts = [FILTERS[tf.filter] || ''];
+  if (a.bright !== 100) parts.push(`brightness(${a.bright / 100})`);
+  if (a.contrast !== 100) parts.push(`contrast(${a.contrast / 100})`);
+  if (a.sat !== 100) parts.push(`saturate(${a.sat / 100})`);
+  return parts.filter(Boolean).join(' ');
+}
+
 /** Draw one photo into a cell rect, honouring its own transform. */
 function drawPhoto(ctx, photo, r, radius, mask) {
   const img = photo.cut || photo.bitmap;
@@ -26,7 +40,7 @@ function drawPhoto(ctx, photo, r, radius, mask) {
   ctx.clip();
 
   const tf = photo.tf;
-  ctx.filter = FILTERS[tf.filter] || '';
+  ctx.filter = filterString(tf);
   ctx.translate(r.x + r.w / 2, r.y + r.h / 2);
   ctx.rotate((tf.rot * Math.PI) / 180);
   ctx.scale(tf.flipH ? -1 : 1, tf.flipV ? -1 : 1);

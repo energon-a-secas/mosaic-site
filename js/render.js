@@ -1,5 +1,5 @@
-import { state, resolvePlacement, selectedPhoto } from './state.js';
-import { computeCells, aspect } from './layouts.js';
+import { state, resolvePlacement, selectedPhoto, spansFor } from './state.js';
+import { computeCells, aspect, USES_COLS, USES_SPAN } from './layouts.js';
 import { compose, FILTER_NAMES } from './compose.js';
 
 const $ = (s) => document.querySelector(s);
@@ -14,9 +14,18 @@ export function cacheRefs() {
   refs.empty = $('#empty');
 }
 
-/** Cells for the current pool + params. Exported so events can hit-test. */
+/**
+ * Cells for the current pool + params.
+ * Spans depend on placement and placement depends on cell count, so this resolves
+ * once with unit spans to learn the count, then re-runs with the real spans. Two
+ * cheap passes beat threading photos into the layout engine, which contract 1
+ * forbids.
+ */
 export function currentCells() {
-  return computeCells(Math.max(state.pool.length, 1), state.layout, state.params);
+  const n = Math.max(state.pool.length, 1);
+  const first = computeCells(n, state.layout, state.params);
+  const spans = spansFor(resolvePlacement(first.length));
+  return computeCells(n, state.layout, state.params, spans);
 }
 
 export function currentPlacement(cells) {
@@ -98,6 +107,13 @@ export function drawInspector() {
   });
   refs.inspector.querySelector('[data-flip="h"]').classList.toggle('is-on', p.tf.flipH);
   refs.inspector.querySelector('[data-flip="v"]').classList.toggle('is-on', p.tf.flipV);
+  for (const k of ['bright', 'contrast', 'sat']) {
+    const el = refs.inspector.querySelector(`[data-adj="${k}"]`);
+    if (el) el.value = String(p.tf.adj[k]);
+  }
+  const heroBtn = refs.inspector.querySelector('[data-act="hero"]');
+  heroBtn.classList.toggle('is-on', p.span === 2);
+  heroBtn.hidden = !USES_SPAN.includes(state.layout);
   const cut = refs.inspector.querySelector('[data-act="restore"]');
   if (cut) cut.hidden = !p.cut;
 }
@@ -120,14 +136,21 @@ export function syncControls() {
   cols.value = String(state.params.cols);
   document.querySelector('[data-cols-out]').textContent = String(state.params.cols);
   // Column count is meaningless for the shape and strip layouts.
-  document.querySelector('[data-cols-row]').hidden =
-    !['grid', 'masonry'].includes(state.layout);
+  document.querySelector('[data-cols-row]').hidden = !USES_COLS.includes(state.layout);
   for (const k of ['gap', 'radius', 'pad']) {
     const el = document.querySelector(`[data-param="${k}"]`);
     if (el) el.value = String(state.params[k]);
   }
   document.querySelector('[data-param="ratio"]').value = state.params.ratio;
   document.querySelector('[data-param="background"]').value = state.background;
+}
+
+/** Undo/redo buttons reflect whether there is anything to undo. */
+export function syncHistory(canUndo, canRedo) {
+  const u = document.querySelector('[data-act="undo"]');
+  const r = document.querySelector('[data-act="redo"]');
+  if (u) u.disabled = !canUndo;
+  if (r) r.disabled = !canRedo;
 }
 
 export function renderAll() {

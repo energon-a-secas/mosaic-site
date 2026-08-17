@@ -143,8 +143,16 @@
             <button type="button" class="chip" data-layout="heart">heart</button>
             <button type="button" class="chip" data-layout="circle">circle</button>
             <button type="button" class="chip" data-layout="diamond">diamond</button>
+            <button type="button" class="chip" data-layout="star">star</button>
+            <button type="button" class="chip" data-layout="spiral">spiral</button>
+            <button type="button" class="chip" data-layout="wave">wave</button>
           </div>
           <p class="hint">Switch whenever you like. Your photos and their framing carry over.</p>
+          <div class="chips" style="margin-top:8px">
+            <button type="button" class="chip" data-act="shuffle" title="Shuffle (R)">shuffle</button>
+            <button type="button" class="chip" data-act="undo" title="Undo (Cmd Z)" disabled>undo</button>
+            <button type="button" class="chip" data-act="redo" title="Redo (Cmd Shift Z)" disabled>redo</button>
+          </div>
         </div>
 
         <div class="grp" data-cols-row>
@@ -182,6 +190,13 @@
             <button type="button" class="chip" data-export="3000">3000px</button>
           </div>
           <p class="hint">Thumbnail, web, and print. Same render path as the preview.</p>
+
+          <label class="lab">Each photo as its own thumbnail</label>
+          <div class="chips">
+            <button type="button" class="chip" data-thumbs="256">256px</button>
+            <button type="button" class="chip" data-thumbs="512">512px</button>
+          </div>
+          <p class="hint">Square crops using each photo's own framing, saved one by one.</p>
         </div>
       </aside>
 
@@ -217,8 +232,19 @@
           <div class="chips">
             <button type="button" class="chip" data-flip="h">flip H</button>
             <button type="button" class="chip" data-flip="v">flip V</button>
+            <button type="button" class="chip" data-act="fit">fit square</button>
             <button type="button" class="chip" data-act="reset">reset</button>
           </div>
+          <div class="chips">
+            <button type="button" class="chip" data-act="hero" title="Make this a 2x2 block (H)">hero 2x2</button>
+          </div>
+
+          <label class="lab" for="bright">Brightness</label>
+          <input id="bright" type="range" min="40" max="180" step="1" data-adj="bright">
+          <label class="lab" for="contrast">Contrast</label>
+          <input id="contrast" type="range" min="40" max="200" step="1" data-adj="contrast">
+          <label class="lab" for="sat">Saturation</label>
+          <input id="sat" type="range" min="0" max="220" step="1" data-adj="sat">
 
           <label class="lab">Filter</label>
           <div class="chips" data-filters></div>
@@ -236,7 +262,8 @@
   </main>
 
   <footer class="neo-footer" data-footer-mode="minimal">
-    Your photos never leave this device. Everything here runs in the browser.
+    Your photos never leave this device. Everything here runs in the browser, and
+    your session is saved locally so a reload does not lose your work.
   </footer>
 
   <script type="module" src="js/app.js"></script>
