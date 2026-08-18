@@ -24,3 +24,9 @@ package-lock.json
 # Session briefs and maps. Useful while the work happens, not repo content, and
 # on a site repo this directory is public.
 .forge/
+
+# ── Neorgon base (enforced by smoke check 20) ─────────────────────────────────
+__pycache__/
+*.py[cod]
+skills-archived/
+*.log
