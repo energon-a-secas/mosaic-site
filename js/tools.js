@@ -88,15 +88,13 @@ export async function makeThumb(img, max = 200) {
  * because browsers throttle or silently drop a burst of them.
  */
 export async function batchThumbnails(pool, size, onEach) {
-  const { filterString } = await import('./compose.js');
   let n = 0;
   for (const p of pool) {
-    const img = p.cut || p.bitmap;
+    const img = p.fx || p.cut || p.bitmap;
     const cv = document.createElement('canvas');
     cv.width = size; cv.height = size;
     const c = cv.getContext('2d');
     c.imageSmoothingQuality = 'high';
-    c.filter = filterString(p.tf);
     c.save();
     c.translate(size / 2, size / 2);
     c.rotate((p.tf.rot * Math.PI) / 180);

@@ -1,33 +1,16 @@
+import { PRESET_NAMES } from './filters.js';
+export { PRESET_NAMES as FILTER_NAMES };
+
 // One render path. Contract 3: preview and export call compose() with a different
 // scale and nothing else. A separate export routine is how the preview and the
 // saved file drift apart, and that drift is only discovered after the user has
 // already saved something wrong.
 
-const FILTERS = {
-  none: '', mono: 'grayscale(1)', warm: 'saturate(1.25) sepia(.28)',
-  cool: 'saturate(1.1) hue-rotate(-12deg) brightness(1.04)',
-  faded: 'contrast(.85) brightness(1.12) saturate(.8)',
-  punch: 'contrast(1.25) saturate(1.35)',
-};
-export const FILTER_NAMES = Object.keys(FILTERS);
-
-/**
- * A preset and the numeric sliders compose into one filter string rather than
- * fighting: the preset sets the look, the sliders trim it. Identity values are
- * dropped so an untouched photo pays no filter cost at all.
- */
-export function filterString(tf) {
-  const a = tf.adj || { bright: 100, contrast: 100, sat: 100 };
-  const parts = [FILTERS[tf.filter] || ''];
-  if (a.bright !== 100) parts.push(`brightness(${a.bright / 100})`);
-  if (a.contrast !== 100) parts.push(`contrast(${a.contrast / 100})`);
-  if (a.sat !== 100) parts.push(`saturate(${a.sat / 100})`);
-  return parts.filter(Boolean).join(' ');
-}
-
 /** Draw one photo into a cell rect, honouring its own transform. */
 function drawPhoto(ctx, photo, r, radius, mask) {
-  const img = photo.cut || photo.bitmap;
+  // fx is the colour-corrected bitmap, baked by filters.js. ctx.filter is not
+  // Baseline (Safari disables it), so colour must already be in the pixels.
+  const img = photo.fx || photo.cut || photo.bitmap;
   ctx.save();
   ctx.beginPath();
   if (mask === 'circle') {
@@ -40,7 +23,6 @@ function drawPhoto(ctx, photo, r, radius, mask) {
   ctx.clip();
 
   const tf = photo.tf;
-  ctx.filter = filterString(tf);
   ctx.translate(r.x + r.w / 2, r.y + r.h / 2);
   ctx.rotate((tf.rot * Math.PI) / 180);
   ctx.scale(tf.flipH ? -1 : 1, tf.flipV ? -1 : 1);

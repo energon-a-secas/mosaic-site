@@ -5,6 +5,7 @@ import { exportBlob } from './compose.js';
 import { aspect } from './layouts.js';
 import { removeBackground, makeThumb, batchThumbnails, fitAspect } from './tools.js';
 import * as H from './history.js';
+import { applyFx, fxKey, isIdentity } from './filters.js';
 import { saveSession, loadSession, clearSession } from './store.js';
 import { showToast as toast } from './utils.js';
 
@@ -20,6 +21,7 @@ async function ingest(files) {
       const bmp = await createImageBitmap(f);
       const p = addPhoto({ bitmap: bmp, name: f.name, w: bmp.width, h: bmp.height, blob: f });
       p.thumb = await makeThumb(bmp);
+      if (!isIdentity(p.tf)) { p.fx = await applyFx(bmp, p.tf); p.fxKey = fxKey(p.tf); }
     } catch {
       toast(`Could not read ${f.name}`);
     }
@@ -41,7 +43,24 @@ function cellAt(ev) {
 }
 
 let lastFrame = { cells: [], placement: [], W: 1, H: 1, ar: 1 };
-let saveTimer = null;
+let saveTimer = null, fxTimer = null;
+
+/**
+ * Bake colour into a photo's pixels, because ctx.filter is not Baseline.
+ * Debounced: a slider drag fires per pixel of travel, and a full-resolution pass
+ * is far too slow for that. The stage keeps showing the last good bake meanwhile.
+ */
+function scheduleFx(photo, delay = 180) {
+  clearTimeout(fxTimer);
+  fxTimer = setTimeout(async () => {
+    const key = fxKey(photo.tf);
+    if (photo.fxKey === key) return;
+    if (isIdentity(photo.tf)) { photo.fx = null; photo.fxKey = key; repaintStage(); return; }
+    photo.fx = await applyFx(photo.cut || photo.bitmap, photo.tf);
+    photo.fxKey = key;
+    repaintStage();
+  }, delay);
+}
 
 function repaint() {
   lastFrame = renderAll();
@@ -139,13 +158,13 @@ export function wire() {
     const tf = e.target.closest('[data-tf]');
     if (tf) { p.tf[tf.dataset.tf] = Number(tf.value); repaintStage(); return; }
     const adj = e.target.closest('[data-adj]');
-    if (adj) { p.tf.adj[adj.dataset.adj] = Number(adj.value); repaintStage(); }
+    if (adj) { p.tf.adj[adj.dataset.adj] = Number(adj.value); repaintStage(); scheduleFx(p); }
   });
   ins.addEventListener('click', async (e) => {
     const p = selectedPhoto();
     if (!p) return;
     const f = e.target.closest('[data-filter]');
-    if (f) { edit(() => { p.tf.filter = f.dataset.filter; }); return; }
+    if (f) { edit(() => { p.tf.filter = f.dataset.filter; }); scheduleFx(p, 0); return; }
     const fl = e.target.closest('[data-flip]');
     if (fl) {
       const key = fl.dataset.flip === 'h' ? 'flipH' : 'flipV';
@@ -153,20 +172,20 @@ export function wire() {
       return;
     }
     const act = e.target.closest('[data-act]')?.dataset.act;
-    if (act === 'reset') { edit(() => { p.tf = freshTf(); }); } else if (act === 'cutout') {
+    if (act === 'reset') { edit(() => { p.tf = freshTf(); }); scheduleFx(p, 0); } else if (act === 'cutout') {
       const btn = e.target.closest('[data-act]');
       btn.disabled = true; btn.textContent = 'Working…';
       const tol = Number(ins.querySelector('[data-tol]').value);
       const out = await removeBackground(p.bitmap, tol);
       btn.disabled = false; btn.textContent = 'Remove background';
       if (!out) { toast('No flat background found. Try a higher tolerance.'); return; }
-      H.mark(state); p.cut = out; p.thumb = await makeThumb(out); repaint();
+      H.mark(state); p.cut = out; p.fxKey = null; p.thumb = await makeThumb(out); repaint(); scheduleFx(p, 0);
     } else if (act === 'hero') {
       edit(() => { p.span = p.span === 2 ? 1 : 2; });
     } else if (act === 'fit') {
       edit(() => fitAspect(p, 1));
     } else if (act === 'restore') {
-      H.mark(state); p.cut = null; p.thumb = await makeThumb(p.bitmap); repaint();
+      H.mark(state); p.cut = null; p.fxKey = null; p.thumb = await makeThumb(p.bitmap); repaint(); scheduleFx(p, 0);
     }
   });
 
@@ -257,6 +276,7 @@ async function restoreSession() {
       p.span = row.span || 1;
       p.tf = { ...freshTf(), ...row.tf, adj: { ...freshTf().adj, ...(row.tf?.adj || {}) } };
       p.thumb = await makeThumb(bmp);
+      if (!isIdentity(p.tf)) { p.fx = await applyFx(bmp, p.tf); p.fxKey = fxKey(p.tf); }
     }
     const m = saved.meta;
     if (m) {
