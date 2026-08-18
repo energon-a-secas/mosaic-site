@@ -50,14 +50,14 @@
   }
   </script>
 </head>
-<body>
+<body data-season="off">
 
   <a class="skip-link" href="#main">Skip to content</a>
 
   <!-- Neorgon Header Kit contract (packages/neorgon-ui/header/README.md).
        data-header-mode: hub (glass) | content (sticky gradient) | app (slim, auto-hides on scroll).
        Pick content for learning/content sites, app for tool-dense sites. -->
-  <header class="header-bar" data-header-mode="app">
+  <header class="header-bar" data-header-mode="app" data-header-skin="custom">
     <div class="header-logo">
       <a href="https://neorgon.com/" target="_blank" rel="noopener noreferrer">
         <img src="https://cdn.neorgon.org/v1.0.0/energon-classic-logo.png" class="header-logo-img" alt="Logo">
@@ -133,7 +133,8 @@
 
     <section class="board" aria-label="Collage editor">
 
-      <aside class="rail" aria-label="Layout controls">
+      <aside class="rail" id="rail" aria-label="Layout controls">
+          <button type="button" class="sheet-close" data-sheet-close>Close</button>
         <div class="grp">
           <h2 class="grp-t">Layout</h2>
           <div class="chips" role="group" aria-label="Layout style">
@@ -164,10 +165,10 @@
           <label class="lab" for="ratio">Canvas</label>
           <select id="ratio" data-param="ratio">
             <option value="1:1">Square 1:1</option>
-            <option value="4:5" selected>Portrait 4:5</option>
+            <option value="4:5">Portrait 4:5</option>
             <option value="9:16">Story 9:16</option>
             <option value="3:2">Landscape 3:2</option>
-            <option value="16:9">Wide 16:9</option>
+            <option value="16:9" selected>Wide 16:9</option>
           </select>
         </div>
 
@@ -220,7 +221,8 @@
         </div>
       </div>
 
-      <aside class="side" aria-label="Photos and editing">
+      <aside class="side" id="side" aria-label="Photos and editing">
+          <button type="button" class="sheet-close" data-sheet-close>Close</button>
         <div class="side-head">
           <button type="button" class="btn btn--sm" data-act="add">Add photos</button>
           <span class="count" id="count">no photos yet</span>
@@ -295,6 +297,11 @@
         </div>
       </aside>
     </section>
+
+    <nav class="sheet-tabs" aria-label="Editor panels">
+      <button type="button" data-sheet="rail" aria-expanded="false" aria-controls="rail">Layout</button>
+      <button type="button" data-sheet="side" aria-expanded="false" aria-controls="side">Photos</button>
+    </nav>
   </main>
 
   <footer class="neo-footer" data-footer-mode="minimal">

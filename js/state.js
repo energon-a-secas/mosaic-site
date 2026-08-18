@@ -12,7 +12,7 @@ export const state = {
   pool: [],              // Photo[] — ordered, stable ids, layout-agnostic
   overrides: new Map(),  // cellIndex -> photoId, only explicit user swaps
   layout: 'grid',
-  params: { cols: 3, gap: 12, radius: 8, pad: 24, ratio: '4:5' },
+  params: { cols: 3, gap: 12, radius: 8, pad: 24, ratio: '16:9' },
   background: '#0f1214',
   overlays: [],          // contract 2a, ordered back to front
   selectedOverlay: null,

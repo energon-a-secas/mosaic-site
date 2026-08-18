@@ -7,6 +7,14 @@ export { PRESET_NAMES as FILTER_NAMES };
 // saved file drift apart, and that drift is only discovered after the user has
 // already saved something wrong.
 
+/** Perceived lightness of a hex colour, for picking a contrasting hairline. */
+function lumaOf(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || ''));
+  if (!m) return 0;
+  const n = parseInt(m[1], 16);
+  return (0.2126 * ((n >> 16) & 255) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255)) / 255;
+}
+
 /** Draw one photo into a cell rect, honouring its own transform. */
 function drawPhoto(ctx, photo, r, radius, mask) {
   // fx is the colour-corrected bitmap, baked by filters.js. ctx.filter is not
@@ -53,7 +61,9 @@ export function compose(ctx, cells, placement, opts) {
     if (!photo) {
       if (!emptyCells) return;
       ctx.save();
-      ctx.strokeStyle = 'rgba(255,255,255,.16)';
+      // Keyed to the collage background, not to the theme: the canvas can be any
+      // colour the user picks, so a fixed white stroke vanishes on a light one.
+      ctx.strokeStyle = lumaOf(background) > 0.55 ? 'rgba(0,0,0,.22)' : 'rgba(255,255,255,.20)';
       ctx.setLineDash([6, 6]);
       ctx.lineWidth = 2;
       if (c.mask === 'circle') {

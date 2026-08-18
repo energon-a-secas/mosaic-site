@@ -360,6 +360,30 @@ export function wire() {
     ingest(items.map((i) => i.getAsFile()).filter(Boolean));
   });
 
+  // ── mobile sheets ─────────────────────────────────────────────────────────
+  // One open at a time, and Escape closes. Opening a sheet does not repaint the
+  // stage, so the canvas keeps its last render behind the drawer.
+  const sheets = { rail: document.querySelector('#rail'), side: document.querySelector('#side') };
+  const tabs = [...document.querySelectorAll('[data-sheet]')];
+  function openSheet(name) {
+    for (const [k, el] of Object.entries(sheets)) {
+      const on = k === name;
+      el.toggleAttribute('data-open', on);
+      const tab = tabs.find((t) => t.dataset.sheet === k);
+      if (tab) tab.setAttribute('aria-expanded', String(on));
+    }
+  }
+  const closeSheets = () => openSheet(null);
+  tabs.forEach((t) => t.addEventListener('click', () => {
+    openSheet(t.getAttribute('aria-expanded') === 'true' ? null : t.dataset.sheet);
+  }));
+  document.querySelectorAll('[data-sheet-close]').forEach((b) =>
+    b.addEventListener('click', closeSheets));
+  addEventListener('keydown', (ev) => { if (ev.key === 'Escape') closeSheets(); });
+  // A layout choice on a phone should show its result, not stay buried.
+  document.querySelectorAll('[data-layout]').forEach((b) =>
+    b.addEventListener('click', () => { if (innerWidth <= 780) closeSheets(); }));
+
   addEventListener('resize', repaintStage);
   restoreSession();
 }

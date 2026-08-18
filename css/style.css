@@ -1,3 +1,87 @@
+@media (max-width: 1080px) {
+  .board { grid-template-columns: 200px minmax(0, 1fr) 260px; }
+  .rail, .side { padding: 14px 12px; }
+}
+
+/* ── Phone: the canvas is the app, the panels are drawers ──────────────────
+   Stacking three scrolling columns puts the stage below a wall of controls,
+   which is the opposite of what someone making a quick collage needs. Instead
+   the stage owns the viewport and each panel becomes a bottom sheet, one at a
+   time, reachable from a fixed tab bar within thumb range. */
+@media (max-width: 780px) {
+  .board {
+    display: block;
+    min-height: calc(100dvh - 56px);
+    background: var(--s-surround);
+  }
+  .stage-wrap {
+    padding: 12px;
+    min-height: calc(100dvh - 56px - var(--sheet-peek, 56px));
+  }
+
+  .rail, .side {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: 40;
+    max-height: 62dvh;
+    overflow-y: auto;
+    padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+    background: var(--s-panel);
+    border-top: 1px solid var(--b-subtle);
+    border-radius: 14px 14px 0 0;
+    box-shadow: 0 -8px 28px rgba(0,0,0,.16);
+    transform: translateY(100%);
+    transition: transform .22s var(--ease-out);
+  }
+  .rail[data-open], .side[data-open] { transform: translateY(0); }
+
+  /* One sheet at a time: a second open sheet would cover the canvas entirely. */
+  .sheet-tabs {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: 50;
+    display: flex;
+    gap: 8px;
+    padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
+    background: var(--s-panel);
+    border-top: 1px solid var(--b-subtle);
+  }
+  .sheet-tabs button {
+    flex: 1;
+    min-height: 44px;            /* WCAG 2.5.8 floor is 24px; 44 is thumb-comfortable */
+    font: inherit; font-size: .82rem; font-weight: 600;
+    border: 1px solid var(--b-control);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--t-primary);
+  }
+  .sheet-tabs button[aria-expanded="true"] {
+    background: var(--t-primary); color: #fff; border-color: var(--t-primary);
+  }
+  .sheet-close {
+    position: sticky; top: 0; z-index: 1;
+    display: block; min-height: 44px;
+    /* Pull out to the sheet's padding so the bar spans full width, then push the
+       content clear of it. Without the bottom margin the first heading scrolls
+       under an opaque sticky bar and reads as clipped. */
+    margin: -16px -16px 18px;
+    width: calc(100% + 32px);
+    padding: 12px;
+    border: 0; border-bottom: 1px solid var(--b-hairline);
+    background: var(--s-panel); color: var(--t-secondary);
+    font: inherit; font-size: .82rem; cursor: pointer;
+  }
+  .rail .grp:first-of-type, .side .side-head { margin-top: 0; }
+
+  /* Controls get thumb-sized rather than mouse-sized. */
+  .chip { min-height: 36px; padding: 8px 13px; }
+  .thumb-x { opacity: 1; width: 26px; height: 26px; }   /* no hover on touch */
+  input[type="range"] { height: 32px; }
+  .strip { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); }
+}
+
+@media (min-width: 781px) { .sheet-tabs, .sheet-close { display: none; } }
+
 /* ── Reset & base ──────────────────────────────────────────── */
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -592,6 +676,76 @@ button:active,
   }
 }
 
+
+/* ══ Editor light dialect ═════════════════════════════════════════════════
+   SIGNED in docs/design/dialects.md 2026-08-17.
+
+   Every neutral here is strictly R=G=B. A tinted grey induces its complement
+   into adjacent photographs through chromatic induction, which in a tool whose
+   job is judging images is a correctness defect and not a matter of taste.
+
+   The canvas surround is #CACACA (Munsell N8), the print industry's surround
+   for colour comparison. It is deliberately NOT white: a white field makes
+   users systematically over-brighten every photo they edit.
+   ════════════════════════════════════════════════════════════════════════ */
+:root {
+  color-scheme: light;
+
+  --s-page:     #F2F2F2;   /* chrome behind panels; not white, so panels read as objects */
+  --s-panel:    #FFFFFF;   /* narrow strips only, never adjacent to a photo */
+  --s-sunken:   #E8E8E8;   /* wells and tracks; in light themes recession goes darker */
+  --s-surround: #CACACA;   /* THE CANVAS SURROUND. Munsell N8. */
+
+  --b-hairline: #E2E2E2;
+  --b-subtle:   #D4D4D4;   /* thumbnail keylines, panel edges */
+  --b-control:  #6E6E6E;   /* the one border clearing 3:1 on every surface incl. surround */
+
+  --t-primary:   #1A1A1A;  /* 17.40:1 on panel, 15.55 on page */
+  --t-secondary: #595959;  /*  7.00:1 on panel,  5.72 on sunken */
+  --t-disabled:  #9E9E9E;  /*  2.68:1, exempt under SC 1.4.3 */
+
+  /* Alias EVERY colour token base.css defines. Missing one is not a partial
+     override, it is white-on-white: --text-primary alone left every chip, button
+     and select painting #f9f9f9 on a white panel. */
+  --bg:              var(--s-page);
+  --surface-1:       var(--s-panel);
+  --surface-2:       var(--s-sunken);
+  --text-primary:    var(--t-primary);
+  --text-secondary:  var(--t-secondary);
+  --text-muted:      var(--t-secondary);
+  --border:          var(--b-subtle);
+  --border-strong:   var(--b-control);
+  --border-subtle:   var(--b-hairline);
+
+  --sh-raised:   0 1px 2px rgba(0,0,0,.10), 0 0 0 1px rgba(0,0,0,.06);
+  --sh-artboard: 0 2px 8px rgba(0,0,0,.18);
+  --sh-keyline:  inset 0 0 0 1px var(--b-subtle);
+}
+
+/* base.css paints the fleet dark; this dialect owns its own page surface. */
+html, body { background: var(--s-page); color: var(--t-primary); }
+
+/* The header kit is dark-by-design, so this site declares its own light bar.
+   data-header-skin="custom" is the one sanctioned exception to "no site-local
+   header CSS"; data-season="off" keeps an armed seasonal theme from repainting
+   a colour-judging surface. */
+html:not([data-theme]) .header-bar[data-header-skin="custom"] {
+  --header-bg-start: #FFFFFF;
+  --header-bg-mid:   #FAFAFA;
+  --header-bg-end:   #F2F2F2;
+  --header-accent:   #1A1A1A;
+  --header-text:     #1A1A1A;
+  --header-text-dim: #595959;
+  --header-icon-color: #1A1A1A;
+  --header-border:        #E2E2E2;
+  --header-border-strong: #D4D4D4;
+  --header-control-border:#6E6E6E;
+  --header-menu-bg:    #FFFFFF;
+  --header-menu-hover: #EDEDED;
+  --header-edge-from:  #E2E2E2;
+  --header-edge-to:    #D4D4D4;
+}
+
 /* ══ Mosaic ═══════════════════════════════════════════════════════════════
    Tokens come from the CDN base.css. Nothing here redeclares a colour, type
    or spacing token; --accent in the block above is the one identity knob.
@@ -603,11 +757,11 @@ button:active,
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr) 300px;
   gap: 1px;
-  background: var(--border);
+  background: var(--b-hairline);
   min-height: calc(100dvh - 56px - 70px);
 }
 
-.rail, .side { background: var(--bg); padding: 18px 16px; overflow-y: auto; }
+.rail, .side { background: var(--s-panel); padding: 18px 16px; overflow-y: auto; }
 .side { display: flex; flex-direction: column; gap: 14px; }
 
 .grp { margin-bottom: 20px; }
@@ -629,7 +783,7 @@ button:active,
   cursor: pointer; transition: border-color .18s var(--ease-out), color .18s var(--ease-out);
 }
 .chip:hover { border-color: var(--accent); color: var(--accent); }
-.chip.is-on { border-color: var(--accent); background: var(--accent); color: #fff; }
+.chip.is-on { border-color: var(--t-primary); background: var(--t-primary); color: #fff; }
 .chip--go { border-color: var(--accent); color: var(--accent); }
 .chip:focus-visible, .thumb:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
@@ -645,16 +799,19 @@ select {
 }
 
 /* ── stage ── */
-.stage-wrap { display: grid; place-items: center; padding: 20px; min-height: 340px; }
+.stage-wrap {
+  display: grid; place-items: center; padding: 20px; min-height: 340px;
+  background: var(--s-surround);   /* Munsell N8, the judging surround */
+}
 .stage-box { position: relative; display: grid; place-items: center; width: 100%; height: 100%; }
 #stage {
-  border-radius: 10px; box-shadow: 0 18px 50px rgba(0,0,0,.45);
+  border-radius: 10px; box-shadow: var(--sh-artboard);
   touch-action: none; max-width: 100%;
 }
 .empty {
   position: absolute; inset: 0; margin: auto; width: min(78%, 340px); height: fit-content;
   display: grid; gap: 6px; padding: 22px; border-radius: 12px; cursor: pointer;
-  border: 2px dashed var(--border); background: color-mix(in srgb, var(--bg) 80%, transparent);
+  border: 2px dashed var(--b-control); background: color-mix(in srgb, var(--s-panel) 88%, transparent);
   color: var(--text-primary); font: inherit; text-align: center;
 }
 .empty strong { font-size: 1rem; }
@@ -671,10 +828,11 @@ body.is-dropping .empty { border-color: var(--accent); }
 }
 .thumb {
   position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden;
-  border: 2px solid transparent; cursor: grab; background: var(--surface-2);
+  border: 2px solid transparent; cursor: grab; background: var(--s-sunken);
+  box-shadow: var(--sh-keyline);
 }
 .thumb canvas { width: 100%; height: 100%; display: block; }
-.thumb.is-sel { border-color: var(--accent); }
+.thumb.is-sel { border-color: var(--t-primary); box-shadow: 0 0 0 2px #fff inset; }
 .thumb-x {
   position: absolute; top: 3px; right: 3px; width: 20px; height: 20px; line-height: 1;
   border: 0; border-radius: 50%; background: rgba(0,0,0,.62); color: #fff;
