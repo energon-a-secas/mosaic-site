@@ -23,10 +23,14 @@ export const freshTf = () => ({
   adj: { bright: 100, contrast: 100, sat: 100 },
 });
 
-export function addPhoto({ bitmap, name, w, h, blob }) {
+export function addPhoto({ bitmap, name, blob, id }) {
   const photo = {
-    id: `p${state.nextId++}`,
-    name, bitmap, w, h,
+    // A restored photo MUST keep its stored id. overrides map cellIndex -> photoId,
+    // so re-minting ids on reload silently repoints every manual swap at a
+    // different photo, or at nothing. Contract 1 calls these ids stable; they were
+    // only stable until the first reload.
+    id: id || `p${state.nextId++}`,
+    name, bitmap,
     blob,                // kept for persistence; bitmaps cannot be stored
     span: 1,             // 2 = a 2x2 hero block (contract 1a)
     // Contract 2: framing lives on the photo, so it survives every layout change.

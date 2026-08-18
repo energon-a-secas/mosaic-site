@@ -1,6 +1,7 @@
 import { state, addPhoto, removePhoto, movePhoto, swapCells, selectedPhoto,
          shufflePool, freshTf } from './state.js';
-import { renderAll, drawStage, currentCells, currentPlacement, refs, syncHistory } from './render.js';
+import { renderAll, drawStage, currentCells, currentPlacement, refs, syncHistory,
+         syncControls } from './render.js';
 import { exportBlob } from './compose.js';
 import { aspect } from './layouts.js';
 import { removeBackground, makeThumb, batchThumbnails, fitAspect } from './tools.js';
@@ -19,7 +20,7 @@ async function ingest(files) {
   for (const f of list) {
     try {
       const bmp = await createImageBitmap(f);
-      const p = addPhoto({ bitmap: bmp, name: f.name, w: bmp.width, h: bmp.height, blob: f });
+      const p = addPhoto({ bitmap: bmp, name: f.name, blob: f });
       p.thumb = await makeThumb(bmp);
       if (!isIdentity(p.tf)) { p.fx = await applyFx(bmp, p.tf); p.fxKey = fxKey(p.tf); }
     } catch {
@@ -62,11 +63,15 @@ function scheduleFx(photo, delay = 180) {
   }, delay);
 }
 
+function scheduleSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => saveSession(state), 700);
+}
+
 function repaint() {
   lastFrame = renderAll();
   syncHistory(H.canUndo(), H.canRedo());
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => saveSession(state), 700);
+  scheduleSave();
 }
 const repaintStage = () => { lastFrame = drawStage(); };
 /** Mark before a change so it can be undone, then apply it. */
@@ -99,15 +104,26 @@ export function wire() {
     b.addEventListener('click', () => edit(() => { state.layout = b.dataset.layout; }));
   });
   document.querySelectorAll('[data-param]').forEach((el) => {
-    el.addEventListener('pointerdown', () => H.mark(state));
-    el.addEventListener('keydown', (e) => { if (e.key.startsWith('Arrow')) H.mark(state); });
+    // Mark on the FIRST input of a gesture, not on pointerdown: clicking a slider
+    // without moving it used to push a history entry, so the next undo did nothing
+    // visible and looked broken.
+    let armed = false;
+    const arm = () => { armed = true; };
+    el.addEventListener('pointerdown', arm);
+    el.addEventListener('keydown', (ev) => { if (ev.key.startsWith('Arrow')) arm(); });
+    el.addEventListener('input', () => { if (armed) { H.mark(state); armed = false; } });
     el.addEventListener('input', () => {
       const k = el.dataset.param;
       if (k === 'ratio') state.params.ratio = el.value;
       else if (k === 'background') state.background = el.value;
       else state.params[k] = Number(el.value);
-      repaint();
+      // Stage only. A layout slider does not change any thumbnail, and rebuilding
+      // twenty canvases per input event is the single worst hitch in the app.
+      repaintStage();
+      syncControls();
+      scheduleSave();
     });
+    el.addEventListener('change', repaint);
   });
 
   // ── strip: select, delete, reorder ────────────────────────────────────────
@@ -149,12 +165,15 @@ export function wire() {
 
   // ── inspector ─────────────────────────────────────────────────────────────
   const ins = refs.inspector;
+  let insArmed = null;
   ins.addEventListener('pointerdown', (e) => {
-    if (e.target.closest('[data-tf],[data-adj]')) H.mark(state);
+    const c = e.target.closest('[data-tf],[data-adj]');
+    if (c) insArmed = c;
   });
   ins.addEventListener('input', (e) => {
     const p = selectedPhoto();
     if (!p) return;
+    if (insArmed) { H.mark(state); insArmed = null; }
     const tf = e.target.closest('[data-tf]');
     if (tf) { p.tf[tf.dataset.tf] = Number(tf.value); repaintStage(); return; }
     const adj = e.target.closest('[data-adj]');
@@ -272,18 +291,22 @@ async function restoreSession() {
   try {
     for (const row of saved.rows) {
       const bmp = await createImageBitmap(row.blob);
-      const p = addPhoto({ bitmap: bmp, name: row.name, w: bmp.width, h: bmp.height, blob: row.blob });
+      const p = addPhoto({ bitmap: bmp, name: row.name, blob: row.blob, id: row.id });
       p.span = row.span || 1;
       p.tf = { ...freshTf(), ...row.tf, adj: { ...freshTf().adj, ...(row.tf?.adj || {}) } };
       p.thumb = await makeThumb(bmp);
       if (!isIdentity(p.tf)) { p.fx = await applyFx(bmp, p.tf); p.fxKey = fxKey(p.tf); }
     }
+    // Keep minting above every restored id, or the next import collides with one.
+    const maxN = saved.rows.reduce((n, r) => Math.max(n, parseInt(String(r.id).slice(1), 10) || 0), 0);
+    state.nextId = Math.max(state.nextId, maxN + 1);
     const m = saved.meta;
     if (m) {
       state.overrides = new Map(m.overrides || []);
       state.layout = m.layout || state.layout;
       state.params = { ...state.params, ...(m.params || {}) };
       state.background = m.background || state.background;
+      state.nextId = Math.max(state.nextId, m.nextId || 0);
     }
     toast(`Restored ${saved.rows.length} photo${saved.rows.length > 1 ? 's' : ''}`);
   } catch {

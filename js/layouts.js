@@ -7,13 +7,20 @@
 
 const cell = (x, y, w, h, extra = {}) => ({ x, y, w, h, ...extra });
 
+// Contract 1b. Cells are normalised 0..1 on BOTH axes and the compositor maps
+// them with x*W, y*H. So a gap of 0.03 is 24px wide on an 800px canvas and 30px
+// tall on a 1000px one: at the shipped 4:5 default every gutter and margin was
+// 25% taller than it was wide. The engine cannot ask the pool how tall the canvas
+// is, so aspect arrives as a plain number, exactly as spans do.
+const vy = (v, ar) => v * ar;
+
 // Grid with span packing. A photo marked as a hero occupies a 2x2 block and the
 // rest flow around it, which is the single most-asked collage feature.
 //
 // `spans` carries shape only, never photos (contract 1a). The packer walks a
 // row-major occupancy map and drops each item in the first slot that fits; a 2x2
 // that cannot fit the remaining width degrades to 1x1 rather than overflowing.
-function grid(n, { cols, gap, pad }, spans = []) {
+function grid(n, { cols, gap, pad, ar }, spans = []) {
   const C = Math.max(1, cols);
   const occ = [];
   const free = (r, c, w, h) => {
@@ -47,16 +54,17 @@ function grid(n, { cols, gap, pad }, spans = []) {
   }
 
   const rows = Math.max(1, ...placed.map((p) => p.r + p.h));
+  const gy = vy(gap, ar), py = vy(pad, ar);
   const cw = (1 - 2 * pad + gap) / C;
-  const ch = (1 - 2 * pad + gap) / rows;
+  const ch = (1 - 2 * py + gy) / rows;
   return placed.map((p) => cell(
-    pad + p.c * cw, pad + p.r * ch, p.w * cw - gap, p.h * ch - gap,
+    pad + p.c * cw, py + p.r * ch, p.w * cw - gy * 0 - gap, p.h * ch - gy,
   ));
 }
 
 // Column-balanced: each photo goes to the currently shortest column, so a mixed
 // set of portraits and landscapes does not leave one column stranded.
-function masonry(n, { cols, gap, pad }) {
+function masonry(n, { cols, gap, pad, ar }) {
   const c = Math.max(1, cols);
   const colW = (1 - 2 * pad + gap) / c - gap;
   const heights = new Array(c).fill(0);
@@ -70,17 +78,19 @@ function masonry(n, { cols, gap, pad }) {
     placed.push({ col: k, top: heights[k], w: colW, h });
     heights[k] += h + gap;
   }
+  const py = vy(pad, ar);
   const tallest = Math.max(...heights, 0.001) - gap;
-  const scale = tallest > 0 ? (1 - 2 * pad) / tallest : 1;
+  const scale = tallest > 0 ? (1 - 2 * py) / tallest : 1;
   return placed.map((p) => cell(
-    pad + p.col * (colW + gap), pad + p.top * scale, p.w, p.h * scale,
+    pad + p.col * (colW + gap), py + p.top * scale, p.w, p.h * scale,
   ));
 }
 
-function strip(n, { gap, pad }) {
+function strip(n, { gap, pad, ar }) {
   const w = (1 - 2 * pad + gap) / Math.max(n, 1) - gap;
+  const py = vy(pad, ar);
   return Array.from({ length: n }, (_, i) =>
-    cell(pad + i * (w + gap), pad, w, 1 - 2 * pad));
+    cell(pad + i * (w + gap), py, w, 1 - 2 * py));
 }
 
 // Shape layouts place cells along a parametric outline and carry a mask so each
@@ -91,7 +101,7 @@ function strip(n, { gap, pad }) {
 // instead of sitting squashed in the middle. Second the disc size is derived from
 // the smallest gap between neighbouring points rather than from a photo count, so
 // twelve photos tighten the discs instead of overlapping into mush.
-function onCurve(n, fn, { pad }) {
+function onCurve(n, fn, { pad, ar }) {
   // Sample by ARC LENGTH, not by parameter. A heart traced at uniform t bunches
   // points around the cusp, which forced the disc size down to fit the tightest
   // pair and left the rest of the outline sparse. Walking equal distances along
@@ -141,12 +151,14 @@ function onCurve(n, fn, { pad }) {
   const S = 1 - 2 * pad;
   const fit = (gap * S) / (1 + gap);
   const size = Math.max(0.05, Math.min(0.30, fit * 0.97));
-
-  const span = S - size;
+  // Square in PIXELS, not in normalised space, so the disc is a circle and the
+  // compositor's min() no longer throws away one axis.
+  const h = vy(size, ar), py = vy(pad, ar), Sy = 1 - 2 * py;
+  const fitX = S - size, fitY = Sy - h;
   return norm.map((p) => cell(
-    pad + p.x * span,
-    pad + p.y * span,
-    size, size, { mask: 'circle' },
+    pad + p.x * fitX,
+    py + p.y * fitY,
+    size, h, { mask: 'circle' },
   ));
 }
 
@@ -193,9 +205,12 @@ const FNS = { grid, masonry, strip, heart, circle, diamond, star, spiral, wave }
  * Cells for `n` photos. Pure: same inputs, same cells, no state, no photos.
  * `spans` is shape only (contract 1a) and is ignored by every layout but grid.
  */
-export function computeCells(n, layout, params, spans = []) {
+export function computeCells(n, layout, params, spans = [], ar = 1) {
   const fn = FNS[layout] || grid;
-  const p = { cols: params.cols, gap: params.gap / 400, pad: params.pad / 400 };
+  const p = {
+    cols: params.cols, gap: params.gap / 400, pad: params.pad / 400,
+    ar,   // canvas width / height, contract 1b
+  };
   return fn(Math.max(n, 1), p, spans);
 }
 

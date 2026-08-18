@@ -58,12 +58,17 @@ export async function removeBackground(img, tolerance = 32) {
   // Soften the boundary so the cutout does not read as a sticker.
   for (let i = 0; i < w * h; i++) {
     if (d[i * 4 + 3] !== 0) continue;
-    const x = i % w, y = (i / w) | 0;
-    for (const j of [i - 1, i + 1, i - w, i + w]) {
+    // The x guards matter: without them a pixel at x=0 feathers the PREVIOUS
+    // row's last pixel, leaving stray semi-transparent dots down the far edge.
+    const x = i % w;
+    const nb = [];
+    if (x > 0) nb.push(i - 1);
+    if (x < w - 1) nb.push(i + 1);
+    nb.push(i - w, i + w);
+    for (const j of nb) {
       if (j < 0 || j >= w * h) continue;
       if (d[j * 4 + 3] === 255) d[j * 4 + 3] = 140;
     }
-    void x; void y;
   }
   ctx.putImageData(id, 0, 0);
   return createImageBitmap(cv);

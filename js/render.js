@@ -23,9 +23,10 @@ export function cacheRefs() {
  */
 export function currentCells() {
   const n = Math.max(state.pool.length, 1);
-  const first = computeCells(n, state.layout, state.params);
+  const ar = aspect(state.params.ratio);
+  const first = computeCells(n, state.layout, state.params, [], ar);
   const spans = spansFor(resolvePlacement(first.length));
-  return computeCells(n, state.layout, state.params, spans);
+  return computeCells(n, state.layout, state.params, spans, ar);
 }
 
 export function currentPlacement(cells) {

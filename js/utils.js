@@ -7,16 +7,6 @@ export function $(id) {
   return _els[id] || (_els[id] = document.getElementById(id));
 }
 
-/** Escape HTML special characters. */
-export function escHtml(str) {
-  if (str === null || str === undefined) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
 /** Show a temporary toast notification. */
 let _toastTimer = null;
 export function showToast(msg) {
@@ -31,13 +21,4 @@ export function showToast(msg) {
   el.classList.add('visible');
   clearTimeout(_toastTimer);
   _toastTimer = setTimeout(() => el.classList.remove('visible'), 2000);
-}
-
-/** Simple debounce. */
-export function debounce(fn, ms) {
-  let timer;
-  return (...args) => {
-    clearTimeout(timer);
-    timer = setTimeout(() => fn(...args), ms);
-  };
 }
