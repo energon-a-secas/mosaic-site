@@ -18,6 +18,8 @@ function snapshot(state) {
       hasCut: !!p.cut,
     })),
     overrides: [...state.overrides],
+    overlays: state.overlays.map((o) => ({ ...o })),
+    selectedOverlay: state.selectedOverlay,
     layout: state.layout,
     params: { ...state.params },
     background: state.background,
@@ -39,6 +41,8 @@ function restore(state, snap) {
     if (!rec.hasCut) p.cut = null;
   }
   state.overrides = new Map(snap.overrides);
+  state.overlays = (snap.overlays || []).map((o) => ({ ...o }));
+  state.selectedOverlay = snap.selectedOverlay ?? null;
   state.layout = snap.layout;
   state.params = { ...snap.params };
   state.background = snap.background;

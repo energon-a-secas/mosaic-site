@@ -1,5 +1,5 @@
 import { state, addPhoto, removePhoto, movePhoto, swapCells, selectedPhoto,
-         shufflePool, freshTf } from './state.js';
+         shufflePool, freshTf, addOverlay, removeOverlay, selectedOverlayObj } from './state.js';
 import { renderAll, drawStage, currentCells, currentPlacement, refs, syncHistory,
          syncControls } from './render.js';
 import { exportBlob } from './compose.js';
@@ -7,11 +7,13 @@ import { aspect } from './layouts.js';
 import { removeBackground, makeThumb, batchThumbnails, fitAspect } from './tools.js';
 import * as H from './history.js';
 import { applyFx, fxKey, isIdentity } from './filters.js';
+import { makeText, PRESETS, FONTS, overlayAt } from './overlays.js';
 import { saveSession, loadSession, clearSession } from './store.js';
 import { showToast as toast } from './utils.js';
 
 let dragFrom = null;      // strip reorder
 let cellDrag = null;      // stage cell swap
+let ovlDrag = null;       // overlay being dragged
 
 async function ingest(files) {
   const list = [...files].filter((f) => f.type.startsWith('image/'));
@@ -149,14 +151,35 @@ export function wire() {
 
   // ── stage: click to select, drag one cell onto another to swap ────────────
   refs.canvas.addEventListener('pointerdown', (e) => {
+    const r = refs.canvas.getBoundingClientRect();
+    const fx = (e.clientX - r.left) / r.width, fy = (e.clientY - r.top) / r.height;
+    const o = overlayAt(state.overlays, fx, fy);
+    if (o) {
+      // Front-to-back: a pointer on an overlay never reaches the cell beneath.
+      H.mark(state);
+      ovlDrag = { o, dx: fx - o.x, dy: fy - o.y };
+      state.selectedOverlay = o.id; state.selected = null;
+      refs.canvas.setPointerCapture?.(e.pointerId);
+      repaint();
+      return;
+    }
+    state.selectedOverlay = null;
     const i = cellAt(e);
-    if (i < 0) return;
+    if (i < 0) { repaint(); return; }
     cellDrag = i;
     const p = lastFrame.placement[i];
     state.selected = p ? p.id : null;
     repaint();
   });
+  refs.canvas.addEventListener('pointermove', (e) => {
+    if (!ovlDrag) return;
+    const r = refs.canvas.getBoundingClientRect();
+    ovlDrag.o.x = Math.max(-0.2, Math.min(1.2, (e.clientX - r.left) / r.width - ovlDrag.dx));
+    ovlDrag.o.y = Math.max(-0.2, Math.min(1.2, (e.clientY - r.top) / r.height - ovlDrag.dy));
+    repaintStage();
+  });
   refs.canvas.addEventListener('pointerup', (e) => {
+    if (ovlDrag) { ovlDrag = null; repaint(); return; }
     if (cellDrag === null) return;
     const j = cellAt(e);
     if (j >= 0 && j !== cellDrag) edit(() => swapCells(cellDrag, j, lastFrame.placement));
@@ -215,7 +238,7 @@ export function wire() {
       const px = Number(b.dataset.export);
       const cells = currentCells();
       const blob = await exportBlob(cells, currentPlacement(cells), {
-        background: state.background, params: state.params,
+        background: state.background, params: state.params, overlays: state.overlays,
         ar: aspect(state.params.ratio), previewW: lastFrame.W,
       }, px);
       const a = document.createElement('a');
@@ -229,7 +252,8 @@ export function wire() {
 
   document.querySelector('[data-act="clear"]').addEventListener('click', () => {
     if (!state.pool.length) return;
-    edit(() => { state.pool.length = 0; state.overrides.clear(); state.selected = null; });
+    edit(() => { state.pool.length = 0; state.overrides.clear(); state.selected = null;
+                 state.overlays = []; state.selectedOverlay = null; });
     clearSession();
   });
 
@@ -280,6 +304,62 @@ export function wire() {
     }
   });
 
+  // ── text and memes ────────────────────────────────────────────────────────
+  const presetWrap = document.querySelector('[data-presets]');
+  Object.keys(PRESETS).forEach((name) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'chip'; b.textContent = name;
+    b.addEventListener('click', () => edit(() => {
+      state.overlays = PRESETS[name]();
+      state.selectedOverlay = state.overlays[0]?.id ?? null;
+    }));
+    presetWrap.appendChild(b);
+  });
+  const fontWrap = document.querySelector('[data-ofonts]');
+  Object.keys(FONTS).forEach((f) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'chip'; b.dataset.ofont = f; b.textContent = f;
+    fontWrap.appendChild(b);
+  });
+
+  document.querySelector('[data-act="addtext"]').addEventListener('click', () =>
+    edit(() => addOverlay(makeText({ text: 'YOUR TEXT', y: 0.4 }))));
+  document.querySelector('[data-act="addbubble"]').addEventListener('click', () =>
+    edit(() => addOverlay(makeText({
+      type: 'bubble', text: 'say something', x: 0.1, y: 0.1, w: 0.5, h: 0.2,
+      font: 'sans', color: '#111111', stroke: 'none', upper: false,
+    }))));
+
+  const tins = document.querySelector('#textins');
+  tins.addEventListener('input', (ev) => {
+    const o = selectedOverlayObj(); const el = ev.target.closest('[data-o]');
+    if (!o || !el) return;
+    const k = el.dataset.o;
+    o[k] = el.type === 'range' ? Number(el.value) : el.value;
+    repaintStage();
+  });
+  tins.addEventListener('pointerdown', (ev) => {
+    if (ev.target.closest('[data-o]')) H.mark(state);
+  });
+  tins.addEventListener('click', (ev) => {
+    const o = selectedOverlayObj(); if (!o) return;
+    const f = ev.target.closest('[data-ofont]');
+    if (f) { edit(() => { o.font = f.dataset.ofont; }); return; }
+    const al = ev.target.closest('[data-o-align]');
+    if (al) { edit(() => { o.align = al.dataset.oAlign; }); return; }
+    const tg = ev.target.closest('[data-o-toggle]');
+    if (tg) { edit(() => { o[tg.dataset.oToggle] = !o[tg.dataset.oToggle]; }); return; }
+    if (ev.target.closest('[data-act="delovl"]')) edit(() => removeOverlay(o.id));
+  });
+
+  // Paste an image straight in: the dominant meme input path.
+  addEventListener('paste', (ev) => {
+    const items = [...(ev.clipboardData?.items || [])].filter((i) => i.type.startsWith('image/'));
+    if (!items.length) return;
+    ev.preventDefault();
+    ingest(items.map((i) => i.getAsFile()).filter(Boolean));
+  });
+
   addEventListener('resize', repaintStage);
   restoreSession();
 }
@@ -307,6 +387,7 @@ async function restoreSession() {
       state.params = { ...state.params, ...(m.params || {}) };
       state.background = m.background || state.background;
       state.nextId = Math.max(state.nextId, m.nextId || 0);
+      state.overlays = (m.overlays || []).map((o) => ({ ...o }));
     }
     toast(`Restored ${saved.rows.length} photo${saved.rows.length > 1 ? 's' : ''}`);
   } catch {

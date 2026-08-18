@@ -67,6 +67,8 @@ export async function saveSession(state, { photos = true } = {}) {
       overrides: [...state.overrides], layout: state.layout,
       params: { ...state.params }, background: state.background,
       nextId: state.nextId,
+      overlays: state.overlays.map((o) => ({ ...o })),
+      schema: 2,
     }, 'session'));
     return true;
   } catch {

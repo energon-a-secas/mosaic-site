@@ -14,6 +14,8 @@ export const state = {
   layout: 'grid',
   params: { cols: 3, gap: 12, radius: 8, pad: 24, ratio: '4:5' },
   background: '#0f1214',
+  overlays: [],          // contract 2a, ordered back to front
+  selectedOverlay: null,
   selected: null,        // photoId
   nextId: 1,
 };
@@ -100,3 +102,13 @@ export function shufflePool() {
   }
   state.overrides.clear();
 }
+
+
+export function addOverlay(o) { state.overlays.push(o); state.selectedOverlay = o.id; return o; }
+export function removeOverlay(id) {
+  const i = state.overlays.findIndex((o) => o.id === id);
+  if (i >= 0) state.overlays.splice(i, 1);
+  if (state.selectedOverlay === id) state.selectedOverlay = null;
+}
+export const overlayById = (id) => state.overlays.find((o) => o.id === id) || null;
+export const selectedOverlayObj = () => overlayById(state.selectedOverlay);

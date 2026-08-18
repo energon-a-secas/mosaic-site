@@ -1,4 +1,4 @@
-import { state, resolvePlacement, selectedPhoto, spansFor } from './state.js';
+import { state, resolvePlacement, selectedPhoto, spansFor, selectedOverlayObj } from './state.js';
 import { computeCells, aspect, USES_COLS, USES_SPAN } from './layouts.js';
 import { compose, FILTER_NAMES } from './compose.js';
 
@@ -53,6 +53,7 @@ export function drawStage() {
 
   compose(refs.ctx, cells, placement, {
     W, H, background: state.background, params: state.params,
+    overlays: state.overlays,
   });
   refs.empty.hidden = state.pool.length > 0;
   return { cells, placement, W, H, ar };
@@ -93,9 +94,25 @@ export function drawStrip() {
   });
 }
 
+export function drawTextInspector() {
+  const el = document.querySelector('#textins');
+  const o = selectedOverlayObj();
+  el.hidden = !o;
+  if (!o) return;
+  for (const k of ['text', 'color', 'stroke', 'strokeRatio', 'rot', 'w']) {
+    const f = el.querySelector(`[data-o="${k}"]`);
+    if (f && f.value !== String(o[k])) f.value = o[k] === 'none' ? '#000000' : o[k];
+  }
+  el.querySelectorAll('[data-ofont]').forEach((b) =>
+    b.classList.toggle('is-on', b.dataset.ofont === o.font));
+  el.querySelectorAll('[data-o-align]').forEach((b) =>
+    b.classList.toggle('is-on', b.dataset.oAlign === o.align));
+  el.querySelector('[data-o-toggle="upper"]').classList.toggle('is-on', !!o.upper);
+}
+
 export function drawInspector() {
   const p = selectedPhoto();
-  refs.inspector.hidden = !p;
+  refs.inspector.hidden = !p || !!state.selectedOverlay;
   if (!p) return;
   refs.inspector.querySelector('[data-ins-name]').textContent = p.name;
   const set = (k, v) => {
@@ -158,5 +175,6 @@ export function renderAll() {
   syncControls();
   drawStrip();
   drawInspector();
+  drawTextInspector();
   return drawStage();
 }

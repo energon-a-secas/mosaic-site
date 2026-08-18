@@ -1,4 +1,5 @@
 import { PRESET_NAMES } from './filters.js';
+import { drawOverlay } from './overlays.js';
 export { PRESET_NAMES as FILTER_NAMES };
 
 // One render path. Contract 3: preview and export call compose() with a different
@@ -40,7 +41,7 @@ function drawPhoto(ctx, photo, r, radius, mask) {
  * `scale` is the only difference between what you see and what you export.
  */
 export function compose(ctx, cells, placement, opts) {
-  const { W, H, background, params, emptyCells = true } = opts;
+  const { W, H, background, params, emptyCells = true, overlays = [] } = opts;
   ctx.save();
   ctx.clearRect(0, 0, W, H);
   ctx.fillStyle = background;
@@ -67,6 +68,10 @@ export function compose(ctx, cells, placement, opts) {
     }
     drawPhoto(ctx, photo, r, params.radius, c.mask);
   });
+
+  // Second pass, in array order, so z-order is just the array. Same function as
+  // the export path, so preview and file cannot disagree (contract 3).
+  for (const o of overlays) drawOverlay(ctx, o, W, H);
   ctx.restore();
 }
 
@@ -78,7 +83,7 @@ export async function exportBlob(cells, placement, opts, pxWidth, type = 'image/
   const ctx = cv.getContext('2d');
   ctx.imageSmoothingQuality = 'high';
   compose(ctx, cells, placement, {
-    ...opts, W: pxWidth, H,
+    ...opts, W: pxWidth, H, overlays: opts.overlays || [],
     params: { ...opts.params, radius: opts.params.radius * (pxWidth / opts.previewW) },
     emptyCells: false,
   });

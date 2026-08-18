@@ -183,6 +183,16 @@
         </div>
 
         <div class="grp">
+          <h2 class="grp-t">Text &amp; memes</h2>
+          <div class="chips" data-presets></div>
+          <div class="chips" style="margin-top:8px">
+            <button type="button" class="chip chip--go" data-act="addtext">add text</button>
+            <button type="button" class="chip" data-act="addbubble">bubble</button>
+          </div>
+          <p class="hint">Captions float over the whole canvas, so they survive every layout change.</p>
+        </div>
+
+        <div class="grp">
           <h2 class="grp-t">Export</h2>
           <div class="chips">
             <button type="button" class="chip" data-export="800">800px</button>
@@ -217,6 +227,32 @@
           <button type="button" class="btn btn--ghost btn--sm" data-act="clear">Clear</button>
         </div>
         <ul id="strip" class="strip" aria-label="Photo pool"></ul>
+
+        <div id="textins" class="ins" hidden>
+          <h2 class="grp-t">Caption</h2>
+          <textarea id="otext" rows="2" data-o="text" aria-label="Caption text"></textarea>
+          <div class="chips" data-ofonts></div>
+          <label class="lab" for="ocolor">Fill</label>
+          <input id="ocolor" type="color" data-o="color">
+          <label class="lab" for="ostroke">Outline</label>
+          <input id="ostroke" type="color" data-o="stroke">
+          <label class="lab" for="ostrokew">Outline weight</label>
+          <input id="ostrokew" type="range" min="0" max="0.25" step="0.005" data-o="strokeRatio">
+          <label class="lab" for="orot">Rotate</label>
+          <input id="orot" type="range" min="-45" max="45" step="1" data-o="rot">
+          <label class="lab" for="osize">Box width</label>
+          <input id="osize" type="range" min="0.15" max="1" step="0.01" data-o="w">
+          <div class="chips">
+            <button type="button" class="chip" data-o-toggle="upper">CAPS</button>
+            <button type="button" class="chip" data-o-align="left">left</button>
+            <button type="button" class="chip" data-o-align="center">centre</button>
+            <button type="button" class="chip" data-o-align="right">right</button>
+          </div>
+          <div class="chips">
+            <button type="button" class="chip" data-act="delovl">remove caption</button>
+          </div>
+          <p class="hint">Drag it on the canvas to move it.</p>
+        </div>
 
         <div id="inspector" class="ins" hidden>
           <h2 class="grp-t" data-ins-name>Photo</h2>

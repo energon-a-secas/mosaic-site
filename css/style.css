@@ -703,3 +703,9 @@ input[type="color"]::-webkit-color-swatch { border: 0; border-radius: 4px; }
 
 .chip[disabled] { opacity: .38; cursor: not-allowed; }
 .chip[disabled]:hover { border-color: var(--border); color: var(--text-primary); }
+
+#otext {
+  width: 100%; font: inherit; font-size: .85rem; padding: 8px 9px; resize: vertical;
+  border-radius: 6px; border: 1px solid var(--border);
+  background: var(--surface-2); color: var(--text-primary);
+}
