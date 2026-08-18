@@ -85,6 +85,29 @@ export function compose(ctx, cells, placement, opts) {
   ctx.restore();
 }
 
+/**
+ * One photo, square, through the SAME renderer as everything else.
+ *
+ * batchThumbnails used to reimplement the transform maths by hand, which made it
+ * a third render path in a codebase whose contract 3 says there is one. It
+ * silently lacked masks and corner radius, and would have silently lacked
+ * captions the moment overlays shipped. A single full-bleed cell fed to compose()
+ * gets all of that for free and cannot drift again.
+ */
+export async function exportThumb(photo, size, background) {
+  const cv = document.createElement('canvas');
+  cv.width = size; cv.height = size;
+  const ctx = cv.getContext('2d');
+  ctx.imageSmoothingQuality = 'high';
+  compose(ctx, [{ x: 0, y: 0, w: 1, h: 1 }], [photo], {
+    W: size, H: size, background,
+    params: { radius: 0 },
+    emptyCells: false,
+    overlays: [],   // a per-photo thumbnail is not the collage
+  });
+  return new Promise((res) => cv.toBlob(res, 'image/png', 0.94));
+}
+
 /** Export at an arbitrary pixel width through the same path as the preview. */
 export async function exportBlob(cells, placement, opts, pxWidth, type = 'image/png') {
   const H = Math.round(pxWidth / opts.ar);

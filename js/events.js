@@ -15,8 +15,22 @@ import { showToast as toast } from './utils.js';
 let dragFrom = null;      // strip reorder
 
 
+const isHeic = (f) => /\.(heic|heif)$/i.test(f.name || '') ||
+  /image\/(heic|heif)/i.test(f.type || '');
+
 async function ingest(files) {
-  const list = [...files].filter((f) => f.type.startsWith('image/'));
+  const all = [...files];
+  // Chrome and Firefox cannot decode HEIC, which is what an iPhone shoots by
+  // default. Without this the first real experience is twenty identical "could
+  // not read" toasts and an empty canvas, with no hint that the FORMAT is the
+  // problem or that the phone can be told to shoot JPEG instead.
+  const heic = all.filter(isHeic);
+  const list = all.filter((f) => !isHeic(f) && (f.type.startsWith('image/') || !f.type));
+  if (heic.length) {
+    toast(heic.length === all.length
+      ? `${heic.length} HEIC photo${heic.length > 1 ? 's' : ''} skipped. Safari opens these; elsewhere set iPhone Settings, Camera, Formats to Most Compatible, or export as JPEG.`
+      : `Skipped ${heic.length} HEIC file${heic.length > 1 ? 's' : ''} this browser cannot decode.`);
+  }
   if (!list.length) return;
   H.mark(state);
   for (const f of list) {
@@ -241,7 +255,7 @@ export function wire() {
       if (!state.pool.length) { toast('Add photos first'); return; }
       const size = Number(b.dataset.thumbs);
       b.disabled = true;
-      const n = await batchThumbnails(state.pool, size,
+      const n = await batchThumbnails(state.pool, size, state.background,
         (i, t) => { b.textContent = `${i}/${t}`; });
       b.disabled = false; b.textContent = `${size}px`;
       toast(`Saved ${n} thumbnail${n > 1 ? 's' : ''}`);

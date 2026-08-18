@@ -1,0 +1,19 @@
+graph TD
+    U([photos in]) --> POOL[state.js<br/>ordered pool]
+    POOL -->|count only| LAY[layouts.js<br/>pure: count to cells]
+    POOL -->|placement| COMP[compose.js<br/>single render path]
+    LAY -->|cells| COMP
+    OVL[overlays.js<br/>caption layer] --> COMP
+    FX[filters.js<br/>colour baked to pixels] --> COMP
+    COMP --> PREV[preview canvas]
+    COMP --> EXP[PNG export]
+    COMP --> THUMB[batch thumbnails]
+    POOL --> STORE[(store.js<br/>IndexedDB)]
+    POOL --> HIST[history.js<br/>undo]
+    GES[gestures.js] --> POOL
+    GES --> OVL
+
+    classDef pure fill:#1f6f6b,stroke:#0d3f3c,color:#fff
+    classDef out  fill:#8a6714,stroke:#5c4410,color:#fff
+    class LAY,COMP pure
+    class PREV,EXP,THUMB out

@@ -92,29 +92,18 @@ export async function makeThumb(img, max = 200) {
  * framing, so a batch of product shots comes out uniform. Downloads are staggered
  * because browsers throttle or silently drop a burst of them.
  */
-export async function batchThumbnails(pool, size, onEach) {
+export async function batchThumbnails(pool, size, background, onEach) {
+  const { exportThumb } = await import('./compose.js');
   let n = 0;
   for (const p of pool) {
-    const img = p.fx || p.cut || p.bitmap;
-    const cv = document.createElement('canvas');
-    cv.width = size; cv.height = size;
-    const c = cv.getContext('2d');
-    c.imageSmoothingQuality = 'high';
-    c.save();
-    c.translate(size / 2, size / 2);
-    c.rotate((p.tf.rot * Math.PI) / 180);
-    c.scale(p.tf.flipH ? -1 : 1, p.tf.flipV ? -1 : 1);
-    const s = Math.max(size / img.width, size / img.height) * p.tf.zoom;
-    c.drawImage(img, -img.width * s / 2 + p.tf.ox * size,
-      -img.height * s / 2 + p.tf.oy * size, img.width * s, img.height * s);
-    c.restore();
-    const blob = await new Promise((r) => cv.toBlob(r, 'image/png', 0.94));
+    const blob = await exportThumb(p, size, background);
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = `${p.name.replace(/\.[^.]+$/, '')}-${size}.png`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 4000);
     onEach?.(++n, pool.length);
+    // Browsers throttle or silently drop a burst of downloads.
     await new Promise((r) => setTimeout(r, 320));
   }
   return n;
