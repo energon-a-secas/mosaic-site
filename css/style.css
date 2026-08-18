@@ -806,7 +806,7 @@ select {
 .stage-box { position: relative; display: grid; place-items: center; width: 100%; height: 100%; }
 #stage {
   border-radius: 10px; box-shadow: var(--sh-artboard);
-  touch-action: none; max-width: 100%;
+  touch-action: none;   /* the canvas owns pan and pinch, not the page */ max-width: 100%;
 }
 .empty {
   position: absolute; inset: 0; margin: auto; width: min(78%, 340px); height: fit-content;

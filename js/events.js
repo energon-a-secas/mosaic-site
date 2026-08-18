@@ -7,13 +7,13 @@ import { aspect } from './layouts.js';
 import { removeBackground, makeThumb, batchThumbnails, fitAspect } from './tools.js';
 import * as H from './history.js';
 import { applyFx, fxKey, isIdentity } from './filters.js';
-import { makeText, PRESETS, FONTS, overlayAt } from './overlays.js';
+import { makeText, PRESETS, FONTS } from './overlays.js';
+import { wireStage } from './gestures.js';
 import { saveSession, loadSession, clearSession } from './store.js';
 import { showToast as toast } from './utils.js';
 
 let dragFrom = null;      // strip reorder
-let cellDrag = null;      // stage cell swap
-let ovlDrag = null;       // overlay being dragged
+
 
 async function ingest(files) {
   const list = [...files].filter((f) => f.type.startsWith('image/'));
@@ -53,6 +53,9 @@ let saveTimer = null, fxTimer = null;
  * Debounced: a slider drag fires per pixel of travel, and a full-resolution pass
  * is far too slow for that. The stage keeps showing the last good bake meanwhile.
  */
+/** Only re-bake colour if this photo actually has any. */
+function scheduleFxIfNeeded(photo) { if (!isIdentity(photo.tf)) scheduleFx(photo); }
+
 function scheduleFx(photo, delay = 180) {
   clearTimeout(fxTimer);
   fxTimer = setTimeout(async () => {
@@ -149,42 +152,8 @@ export function wire() {
     dragFrom = null;
   });
 
-  // ── stage: click to select, drag one cell onto another to swap ────────────
-  refs.canvas.addEventListener('pointerdown', (e) => {
-    const r = refs.canvas.getBoundingClientRect();
-    const fx = (e.clientX - r.left) / r.width, fy = (e.clientY - r.top) / r.height;
-    const o = overlayAt(state.overlays, fx, fy);
-    if (o) {
-      // Front-to-back: a pointer on an overlay never reaches the cell beneath.
-      H.mark(state);
-      ovlDrag = { o, dx: fx - o.x, dy: fy - o.y };
-      state.selectedOverlay = o.id; state.selected = null;
-      refs.canvas.setPointerCapture?.(e.pointerId);
-      repaint();
-      return;
-    }
-    state.selectedOverlay = null;
-    const i = cellAt(e);
-    if (i < 0) { repaint(); return; }
-    cellDrag = i;
-    const p = lastFrame.placement[i];
-    state.selected = p ? p.id : null;
-    repaint();
-  });
-  refs.canvas.addEventListener('pointermove', (e) => {
-    if (!ovlDrag) return;
-    const r = refs.canvas.getBoundingClientRect();
-    ovlDrag.o.x = Math.max(-0.2, Math.min(1.2, (e.clientX - r.left) / r.width - ovlDrag.dx));
-    ovlDrag.o.y = Math.max(-0.2, Math.min(1.2, (e.clientY - r.top) / r.height - ovlDrag.dy));
-    repaintStage();
-  });
-  refs.canvas.addEventListener('pointerup', (e) => {
-    if (ovlDrag) { ovlDrag = null; repaint(); return; }
-    if (cellDrag === null) return;
-    const j = cellAt(e);
-    if (j >= 0 && j !== cellDrag) edit(() => swapCells(cellDrag, j, lastFrame.placement));
-    cellDrag = null;
-  });
+  wireStage({ repaint, repaintStage, edit, lastFrameRef: () => lastFrame,
+              cellAt, scheduleFxIfNeeded });
 
   // ── inspector ─────────────────────────────────────────────────────────────
   const ins = refs.inspector;
