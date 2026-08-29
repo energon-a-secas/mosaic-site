@@ -1,4 +1,4 @@
-# Mosaic — product one-pager
+# Mosaic: product one-pager
 
 **What it is:** Build photo collages that stay editable: change the grid, shape or column count at any time without losing the photos you already placed
 

@@ -22,10 +22,10 @@
   <meta property="og:image:height" content="630">
   <meta name="twitter:image" content="https://mosaic.neorgon.com/og-preview.jpg">
   <link rel="icon" type="image/x-icon" href="https://cdn.neorgon.org/v1.0.0/favicon.ico" />
-  <!-- Fleet design tokens — canonical, do not redeclare locally (PROJECTS.md section 5) -->
+  <!-- Fleet design tokens: canonical, do not redeclare locally (PROJECTS.md section 5) -->
   <link rel="stylesheet" href="https://cdn.neorgon.org/v1.0.0/styles/base.css">
   <link rel="stylesheet" href="css/style.css">
-  <!-- Neorgon Header Kit (vendored; ?header=live swaps CSS to CDN). Keep after style.css — the kit owns the header. -->
+  <!-- Neorgon Header Kit (vendored; ?header=live swaps CSS to CDN). Keep after style.css. The kit owns the header. -->
   <script>(function(){var m=location.search.match(/[?&]theme=([\w-]+)/)||document.cookie.match(/(?:^|;\s*)neo_theme=([\w-]+)/);if(m&&m[1]!=='default')document.documentElement.dataset.theme=decodeURIComponent(m[1]);})();</script>
   <link rel="stylesheet" href="css/neorgon-header.css">
   <link rel="stylesheet" href="css/neorgon-themes.css">
@@ -73,7 +73,7 @@
     <!-- .header-right owns margin-left:auto; home icon is always last. -->
     <div class="header-right">
       <!-- Action buttons (omit .header-actions entirely if the site has none).
-           Mark the 1–2 primary controls with data-keep-mobile — everything else
+           Mark the 1–2 primary controls with data-keep-mobile, everything else
            collapses into the ⋯ overflow menu at ≤700px (handled by neorgon-header.js).
       <div class="header-actions">
         <button class="btn btn--ghost btn--sm" id="someFeatureBtn" data-keep-mobile>Feature</button>
@@ -135,7 +135,7 @@
   <div class="auth-divider"></div>
   -->
 
-  <!-- Main content — replace with your app's HTML structure -->
+  <!-- Main content: replace with your app's HTML structure -->
   <main id="main">
     <input type="file" id="file" accept="image/*" multiple hidden>
 
