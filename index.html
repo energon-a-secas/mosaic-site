@@ -153,6 +153,7 @@
           <div class="chips" role="group" aria-label="Layout style">
             <button type="button" class="chip" data-layout="grid">grid</button>
             <button type="button" class="chip" data-layout="masonry">masonry</button>
+            <button type="button" class="chip" data-layout="scatter">scatter</button>
             <button type="button" class="chip" data-layout="strip">strip</button>
             <button type="button" class="chip" data-layout="heart">heart</button>
             <button type="button" class="chip" data-layout="circle">circle</button>
@@ -167,6 +168,15 @@
             <button type="button" class="chip" data-act="undo" title="Undo (Cmd Z)" disabled>undo</button>
             <button type="button" class="chip" data-act="redo" title="Redo (Cmd Shift Z)" disabled>redo</button>
           </div>
+        </div>
+
+        <div class="grp">
+          <h2 class="grp-t">Style</h2>
+          <div class="chips" data-styles></div>
+          <div class="chips" style="margin-top:8px">
+            <button type="button" class="chip" data-act="allbw">all black &amp; white</button>
+          </div>
+          <p class="hint">One click sets spacing, corners, border and background. Photos and layout stay yours.</p>
         </div>
 
         <div class="grp" data-cols-row>
@@ -186,14 +196,27 @@
         </div>
 
         <div class="grp">
-          <label class="lab" for="gap">Gap</label>
+          <label class="lab" for="gap">Gap <b data-echo="gap"></b></label>
           <input id="gap" type="range" min="0" max="48" step="1" data-param="gap">
-          <label class="lab" for="radius">Corner</label>
+          <label class="lab" for="radius">Corner <b data-echo="radius"></b></label>
           <input id="radius" type="range" min="0" max="48" step="1" data-param="radius">
-          <label class="lab" for="pad">Margin</label>
+          <label class="lab" for="pad">Margin <b data-echo="pad"></b></label>
           <input id="pad" type="range" min="0" max="80" step="1" data-param="pad">
           <label class="lab" for="bg">Background</label>
           <input id="bg" type="color" data-param="background">
+          <div class="chips" style="margin-top:8px">
+            <button type="button" class="chip" data-act="bgmode">gradient</button>
+          </div>
+          <div data-grad-row hidden>
+            <label class="lab" for="bg2">Second colour</label>
+            <input id="bg2" type="color" data-param="bg2">
+            <label class="lab" for="bgangle">Direction <b data-echo="bgangle"></b></label>
+            <input id="bgangle" type="range" min="0" max="360" step="5" data-param="bgangle">
+          </div>
+          <label class="lab" for="border">Photo border <b data-echo="border"></b></label>
+          <input id="border" type="range" min="0" max="30" step="1" data-param="border">
+          <label class="lab" for="bordercolor">Border colour</label>
+          <input id="bordercolor" type="color" data-param="borderColor">
         </div>
 
         <div class="grp">
@@ -209,6 +232,10 @@
         <div class="grp">
           <h2 class="grp-t">Export</h2>
           <div class="chips">
+            <button type="button" class="chip is-on" data-fmt="png">PNG</button>
+            <button type="button" class="chip" data-fmt="jpeg">JPEG</button>
+          </div>
+          <div class="chips" style="margin-top:8px">
             <button type="button" class="chip" data-export="800">800px</button>
             <button type="button" class="chip" data-export="1600">1600px</button>
             <button type="button" class="chip" data-export="3000">3000px</button>
@@ -222,15 +249,34 @@
           </div>
           <p class="hint">Square crops using each photo's own framing, saved one by one.</p>
         </div>
+
+        <div class="grp">
+          <h2 class="grp-t">Demos</h2>
+          <div class="chips">
+            <button type="button" class="chip" data-demo="postcards">postcards</button>
+            <button type="button" class="chip" data-demo="heart">heart</button>
+            <button type="button" class="chip" data-demo="meme">meme</button>
+            <button type="button" class="chip" data-demo="gallery">wall</button>
+          </div>
+          <p class="hint">Sample photos drawn right here in your browser. With photos loaded, a demo asks for a confirming second click before replacing them.</p>
+        </div>
       </aside>
 
       <div class="stage-wrap">
         <div class="stage-box">
           <canvas id="stage" aria-label="Collage preview"></canvas>
-          <button type="button" id="empty" class="empty">
-            <strong>Drop photos here</strong>
-            <span>or click to choose. Layout stays changeable afterwards.</span>
-          </button>
+          <div id="empty" class="empty">
+            <strong>Drop photos anywhere</strong>
+            <span>They never leave this device, and the layout stays changeable afterwards.</span>
+            <button type="button" id="emptyChoose" class="btn btn--primary">Choose photos</button>
+            <span class="empty-or">or try a demo, drawn right here in your browser</span>
+            <div class="chips empty-demos">
+              <button type="button" class="chip" data-demo="postcards">postcards</button>
+              <button type="button" class="chip" data-demo="heart">heart</button>
+              <button type="button" class="chip" data-demo="meme">meme</button>
+              <button type="button" class="chip" data-demo="gallery">wall</button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -271,14 +317,18 @@
 
         <div id="inspector" class="ins" hidden>
           <h2 class="grp-t" data-ins-name>Photo</h2>
+          <div class="chips" style="margin:0 0 10px">
+            <button type="button" class="chip chip--primary" data-act="editphoto">Open editor</button>
+          </div>
+          <p class="hint" style="margin:0 0 10px">Full screen: erase the background by hand, magic wand, black &amp; white, save the photo on its own. Or double-click it on the canvas.</p>
           <p class="hint" style="margin:0 0 10px">Drag a photo to reframe it, scroll to zoom. Hold shift and drag to swap two cells.</p>
-          <label class="lab" for="zoom">Zoom</label>
+          <label class="lab" for="zoom">Zoom <b data-echo="zoom"></b></label>
           <input id="zoom" type="range" min="1" max="4" step="0.01" data-tf="zoom">
-          <label class="lab" for="ox">Nudge across</label>
+          <label class="lab" for="ox">Nudge across <b data-echo="ox"></b></label>
           <input id="ox" type="range" min="-1" max="1" step="0.01" data-tf="ox">
-          <label class="lab" for="oy">Nudge down</label>
+          <label class="lab" for="oy">Nudge down <b data-echo="oy"></b></label>
           <input id="oy" type="range" min="-1" max="1" step="0.01" data-tf="oy">
-          <label class="lab" for="rot">Rotate</label>
+          <label class="lab" for="rot">Rotate <b data-echo="rot"></b></label>
           <input id="rot" type="range" min="-180" max="180" step="1" data-tf="rot">
 
           <div class="chips">
@@ -291,23 +341,17 @@
             <button type="button" class="chip" data-act="hero" title="Make this a 2x2 block (H)">hero 2x2</button>
           </div>
 
-          <label class="lab" for="bright">Brightness</label>
+          <label class="lab" for="bright">Brightness <b data-echo="bright"></b></label>
           <input id="bright" type="range" min="40" max="180" step="1" data-adj="bright">
-          <label class="lab" for="contrast">Contrast</label>
+          <label class="lab" for="contrast">Contrast <b data-echo="contrast"></b></label>
           <input id="contrast" type="range" min="40" max="200" step="1" data-adj="contrast">
-          <label class="lab" for="sat">Saturation</label>
+          <label class="lab" for="sat">Saturation <b data-echo="sat"></b></label>
           <input id="sat" type="range" min="0" max="220" step="1" data-adj="sat">
+          <label class="lab" for="temp">Warmth <b data-echo="temp"></b></label>
+          <input id="temp" type="range" min="-100" max="100" step="1" data-adj="temp">
 
           <label class="lab">Filter</label>
           <div class="chips" data-filters></div>
-
-          <label class="lab" for="tol">Background tolerance</label>
-          <input id="tol" type="range" min="8" max="90" step="1" value="32" data-tol>
-          <div class="chips">
-            <button type="button" class="chip chip--go" data-act="cutout">Remove background</button>
-            <button type="button" class="chip" data-act="restore" hidden>Undo cutout</button>
-          </div>
-          <p class="hint">Flood fill from the edges. Strong on flat backdrops, weak on hair.</p>
         </div>
       </aside>
     </section>
@@ -316,6 +360,90 @@
       <button type="button" data-sheet="rail" aria-expanded="false" aria-controls="rail">Layout</button>
       <button type="button" data-sheet="side" aria-expanded="false" aria-controls="side">Photos</button>
     </nav>
+
+    <!-- Focus editor: full-screen, one photo. All pixel work is local canvas;
+         nothing is uploaded anywhere. Wired by js/editor.js. -->
+    <div id="editor" class="editor" role="dialog" aria-modal="true" aria-label="Photo editor" tabindex="-1" hidden>
+      <div class="ed-top">
+        <strong class="ed-name" data-ed-name></strong>
+        <div class="ed-top-actions">
+          <button type="button" class="chip" data-ed="undo" disabled>undo</button>
+          <button type="button" class="chip" data-ed="redo" disabled>redo</button>
+          <span class="ed-sep" aria-hidden="true"></span>
+          <button type="button" class="chip" data-ed="zoomout" aria-label="Zoom out">&minus;</button>
+          <span class="ed-zoom" data-ed-zoom>100%</span>
+          <button type="button" class="chip" data-ed="zoomin" aria-label="Zoom in">+</button>
+          <button type="button" class="chip" data-ed="zoomfit">fit</button>
+          <span class="ed-sep" aria-hidden="true"></span>
+          <button type="button" class="chip" data-ed="cancel">Cancel</button>
+          <button type="button" class="chip chip--go" data-ed="done">Done</button>
+        </div>
+      </div>
+      <div class="ed-body">
+        <div class="ed-tools" role="toolbar" aria-label="Editing tools">
+          <button type="button" data-ed-tool="erase" class="is-on" title="Erase background (E)" aria-label="Erase brush">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 15 13 7a2 2 0 0 1 2.8 0l2.2 2.2a2 2 0 0 1 0 2.8l-8 8H8l-3-3a2 2 0 0 1 0-2.8Z"/><path d="m11 9 5 5"/><path d="M13 20h7"/></svg>
+            <span>erase</span>
+          </button>
+          <button type="button" data-ed-tool="restore" title="Restore what you erased (R)" aria-label="Restore brush">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21c-3.2 0-5-1.8-5-5 3.2 0 5 1.8 5 5Z"/><path d="M9.7 14.6 18 6.2a1.9 1.9 0 0 1 2.7 2.7l-8.4 8.3"/><path d="m9.7 14.6 2.6 2.6"/></svg>
+            <span>restore</span>
+          </button>
+          <button type="button" data-ed-tool="wand" title="Magic wand: remove the colour you click (W)" aria-label="Magic wand">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 19 9.5-9.5"/><path d="M17.5 3.5v3M16 5h3"/><path d="M20 10v2M19 11h2"/><path d="M11.5 3.5v2M10.5 4.5h2"/></svg>
+            <span>wand</span>
+          </button>
+          <button type="button" data-ed-tool="pan" title="Move around (V, or hold space)" aria-label="Pan">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v16M4 12h16"/><path d="m9 7 3-3 3 3M9 17l3 3 3-3M7 9l-3 3 3 3M17 9l3 3-3 3"/></svg>
+            <span>move</span>
+          </button>
+        </div>
+        <div class="ed-viewport" id="edViewport">
+          <canvas id="edCanvas" aria-label="Photo being edited"></canvas>
+          <div class="ed-cursor" id="edCursor" hidden aria-hidden="true"></div>
+        </div>
+        <aside class="ed-panel" aria-label="Editor settings">
+          <div class="grp">
+            <h2 class="grp-t">Cutout</h2>
+            <label class="lab" for="edBrush">Brush size <b data-echo="edBrush"></b></label>
+            <input id="edBrush" type="range" min="6" max="300" step="1">
+            <label class="lab" for="edSoft">Edge softness <b data-echo="edSoft"></b></label>
+            <input id="edSoft" type="range" min="0" max="1" step="0.05">
+            <label class="lab" for="edTol">Selection tolerance <b data-echo="edTol"></b></label>
+            <input id="edTol" type="range" min="8" max="90" step="1">
+            <div class="chips" style="margin-top:10px">
+              <button type="button" class="chip" data-ed="auto">Auto detect</button>
+              <button type="button" class="chip" data-ed="resetmask">Reset cutout</button>
+            </div>
+            <p class="hint">Erase paints the background away, restore brings it back, and the wand removes the colour you click. Checkerboard means transparent.</p>
+          </div>
+          <div class="grp">
+            <h2 class="grp-t">Colour</h2>
+            <div class="chips" data-ed-filters></div>
+            <label class="lab" for="edBright">Brightness <b data-echo="edBright"></b></label>
+            <input id="edBright" type="range" min="40" max="180" step="1" data-ed-adj="bright">
+            <label class="lab" for="edContrast">Contrast <b data-echo="edContrast"></b></label>
+            <input id="edContrast" type="range" min="40" max="200" step="1" data-ed-adj="contrast">
+            <label class="lab" for="edSat">Saturation <b data-echo="edSat"></b></label>
+            <input id="edSat" type="range" min="0" max="220" step="1" data-ed-adj="sat">
+            <label class="lab" for="edTemp">Warmth <b data-echo="edTemp"></b></label>
+            <input id="edTemp" type="range" min="-100" max="100" step="1" data-ed-adj="temp">
+            <div class="chips" style="margin-top:10px">
+              <button type="button" class="chip" data-ed="noadjust">Reset colour</button>
+            </div>
+            <p class="hint">mono is plain black &amp; white; noir adds contrast for a film look.</p>
+          </div>
+          <div class="grp">
+            <h2 class="grp-t">Save this photo</h2>
+            <div class="chips">
+              <button type="button" class="chip chip--go" data-ed="savepng">PNG</button>
+              <button type="button" class="chip" data-ed="savejpg">JPEG</button>
+            </div>
+            <p class="hint">PNG keeps transparency at full working resolution. JPEG flattens on white. Done applies the edit to the collage instead.</p>
+          </div>
+        </aside>
+      </div>
+    </div>
   </main>
 
   <footer class="neo-footer" data-footer-mode="minimal">

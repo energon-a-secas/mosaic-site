@@ -1,6 +1,7 @@
 import { state, resolvePlacement, selectedPhoto, spansFor, selectedOverlayObj } from './state.js';
 import { computeCells, aspect, USES_COLS, USES_SPAN } from './layouts.js';
 import { compose, FILTER_NAMES } from './compose.js';
+import { allMono } from './presets.js';
 
 const $ = (s) => document.querySelector(s);
 export const refs = {};
@@ -52,8 +53,11 @@ export function drawStage() {
   refs.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
   compose(refs.ctx, cells, placement, {
-    W, H, background: state.background, params: state.params,
+    W, H, background: state.background, bg2: state.bg2, bgAngle: state.bgAngle,
+    borderColor: state.borderColor, params: state.params,
     overlays: state.overlays,
+    selectedId: state.selected,               // preview-only selection ring
+    emptyCells: state.pool.length > 0,        // a bare canvas needs no ghost cell
   });
   refs.empty.hidden = state.pool.length > 0;
   return { cells, placement, W, H, ar };
@@ -85,6 +89,13 @@ export function drawStrip() {
     del.setAttribute('aria-label', `Remove ${p.name}`);
     del.textContent = '×';
     li.appendChild(del);
+    const edit = document.createElement('button');
+    edit.className = 'thumb-edit';
+    edit.type = 'button';
+    edit.dataset.edit = p.id;
+    edit.setAttribute('aria-label', `Edit ${p.name}`);
+    edit.textContent = '✎';
+    li.appendChild(edit);
     if (p.cut) {
       const b = document.createElement('span');
       b.className = 'thumb-cut'; b.textContent = 'cut';
@@ -125,15 +136,13 @@ export function drawInspector() {
   });
   refs.inspector.querySelector('[data-flip="h"]').classList.toggle('is-on', p.tf.flipH);
   refs.inspector.querySelector('[data-flip="v"]').classList.toggle('is-on', p.tf.flipV);
-  for (const k of ['bright', 'contrast', 'sat']) {
+  for (const k of ['bright', 'contrast', 'sat', 'temp']) {
     const el = refs.inspector.querySelector(`[data-adj="${k}"]`);
-    if (el) el.value = String(p.tf.adj[k]);
+    if (el) el.value = String(p.tf.adj[k] ?? (k === 'temp' ? 0 : 100));
   }
   const heroBtn = refs.inspector.querySelector('[data-act="hero"]');
   heroBtn.classList.toggle('is-on', p.span === 2);
   heroBtn.hidden = !USES_SPAN.includes(state.layout);
-  const cut = refs.inspector.querySelector('[data-act="restore"]');
-  if (cut) cut.hidden = !p.cut;
 }
 
 export function buildFilterButtons() {
@@ -148,19 +157,37 @@ export function buildFilterButtons() {
 
 export function syncControls() {
   document.querySelectorAll('[data-layout]').forEach((b) => {
-    b.classList.toggle('is-on', b.dataset.layout === state.layout);
+    const on = b.dataset.layout === state.layout;
+    b.classList.toggle('is-on', on);
+    b.setAttribute('aria-pressed', String(on));
   });
   const cols = document.querySelector('[data-param="cols"]');
   cols.value = String(state.params.cols);
   document.querySelector('[data-cols-out]').textContent = String(state.params.cols);
   // Column count is meaningless for the shape and strip layouts.
   document.querySelector('[data-cols-row]').hidden = !USES_COLS.includes(state.layout);
-  for (const k of ['gap', 'radius', 'pad']) {
+  for (const k of ['gap', 'radius', 'pad', 'border']) {
     const el = document.querySelector(`[data-param="${k}"]`);
-    if (el) el.value = String(state.params[k]);
+    if (el) el.value = String(state.params[k] ?? 0);
   }
   document.querySelector('[data-param="ratio"]').value = state.params.ratio;
   document.querySelector('[data-param="background"]').value = state.background;
+  document.querySelector('[data-param="borderColor"]').value = state.borderColor;
+  // Derived, not remembered: undo, demos and session restore all change the
+  // pool under this button, so its state must come from the pool itself.
+  const bw = document.querySelector('[data-act="allbw"]');
+  bw.classList.toggle('is-on', allMono(state.pool));
+  bw.setAttribute('aria-pressed', String(allMono(state.pool)));
+  // Gradient controls only appear when the background is a gradient.
+  const grad = !!state.bg2;
+  const gm = document.querySelector('[data-act="bgmode"]');
+  gm.classList.toggle('is-on', grad);
+  gm.setAttribute('aria-pressed', String(grad));
+  document.querySelectorAll('[data-grad-row]').forEach((el) => { el.hidden = !grad; });
+  if (grad) {
+    document.querySelector('[data-param="bg2"]').value = state.bg2;
+    document.querySelector('[data-param="bgangle"]').value = String(state.bgAngle);
+  }
 }
 
 /** Undo/redo buttons reflect whether there is anything to undo. */

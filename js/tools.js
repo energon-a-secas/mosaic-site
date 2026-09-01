@@ -74,13 +74,26 @@ export async function removeBackground(img, tolerance = 32) {
   return createImageBitmap(cv);
 }
 
+/**
+ * The photo's strip thumbnail with its current colour baked in, so the strip
+ * agrees with the canvas. At thumb size the colour pass is effectively free.
+ */
+export async function tintThumb(photo) {
+  const { applyFx, isIdentity } = await import('./filters.js');
+  const t = await makeThumb(photo.cut || photo.bitmap);
+  if (isIdentity(photo.tf)) return t;
+  return (await applyFx(t, photo.tf)) || t;
+}
+
 /** Downscale for the strip, so a 12MP import does not repaint at full size. */
 export async function makeThumb(img, max = 200) {
   const s = Math.min(1, max / Math.max(img.width, img.height));
   const cv = document.createElement('canvas');
   cv.width = Math.max(1, Math.round(img.width * s));
   cv.height = Math.max(1, Math.round(img.height * s));
-  cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+  // Hinted: a tinted thumb is read back more than once, and the canvas is tiny.
+  cv.getContext('2d', { willReadFrequently: true })
+    .drawImage(img, 0, 0, cv.width, cv.height);
   return createImageBitmap(cv);
 }
 
@@ -92,11 +105,11 @@ export async function makeThumb(img, max = 200) {
  * framing, so a batch of product shots comes out uniform. Downloads are staggered
  * because browsers throttle or silently drop a burst of them.
  */
-export async function batchThumbnails(pool, size, background, onEach) {
+export async function batchThumbnails(pool, size, bg, onEach) {
   const { exportThumb } = await import('./compose.js');
   let n = 0;
   for (const p of pool) {
-    const blob = await exportThumb(p, size, background);
+    const blob = await exportThumb(p, size, bg);
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = `${p.name.replace(/\.[^.]+$/, '')}-${size}.png`;

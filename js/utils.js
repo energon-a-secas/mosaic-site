@@ -7,6 +7,18 @@ export function $(id) {
   return _els[id] || (_els[id] = document.getElementById(id));
 }
 
+/**
+ * Numeric readouts for sliders: every `<b data-echo="someInputId">` shows that
+ * input's current value, the same idiom the Columns readout uses. Call after
+ * any pass that sets slider values programmatically.
+ */
+export function echoRanges(scope = document) {
+  scope.querySelectorAll('[data-echo]').forEach((b) => {
+    const el = document.getElementById(b.dataset.echo);
+    if (el) b.textContent = String(Math.round(Number(el.value) * 100) / 100);
+  });
+}
+
 /** Show a temporary toast notification. */
 let _toastTimer = null;
 export function showToast(msg) {

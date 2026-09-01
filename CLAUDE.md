@@ -1,6 +1,8 @@
 # CLAUDE.md: Mosaic
 
-TODO: one sentence on what this is and who it is for.
+Photo collage maker plus a local photo editor: layouts that never own photos, a
+full-screen focus editor with manual background removal (brushes + wand, all
+canvas pixels, no services), and one-click demos drawn in the browser.
 
 **Live:** mosaic.neorgon.com · **Port:** 8867
 
@@ -16,25 +18,36 @@ Then open http://localhost:8867. It must be served over HTTP. The app is ES modu
 
 | Module | Lines | Owns |
 |---|---:|---|
-| `js/events.js` | 408 | `wire` |
-| `js/layouts.js` | 227 | `computeCells`, `USES_COLS`, `USES_SPAN`, `aspect` |
-| `js/render.js` | 181 | `refs`, `cacheRefs`, `currentCells`, `currentPlacement`, `drawStage` |
-| `js/overlays.js` | 173 | `FONTS`, `makeText`, `PRESETS`, `drawOverlay`, `overlayAt` |
-| `js/gestures.js` | 143 | `wireStage` |
-| `js/filters.js` | 130 | `PRESET_NAMES`, `fxKey`, `isIdentity`, `applyFx` |
-| `js/compose.js` | 125 | `compose`, `exportThumb`, `exportBlob` |
-| `js/tools.js` | 118 | `removeBackground`, `makeThumb`, `batchThumbnails`, `fitAspect` |
-| `js/state.js` | 115 | `LAYOUTS`, `state`, `freshTf`, `addPhoto`, `removePhoto` |
-| `js/store.js` | 100 | `saveSession`, `loadSession`, `resetSaveCache`, `clearSession` |
-| `js/history.js` | 81 | `mark`, `undo`, `redo`, `canUndo`, `canRedo` |
-| `js/utils.js` | 25 | `$`, `showToast` |
-| `js/app.js` | 7 | none |
+| `js/events.js` | 495 | `wire` |
+| `js/editor.js` | 468 | focus editor session, ops, `openEditor`, `isEditorOpen`, `wireEditor` |
+| `js/demo-art.js` | 421 | `SAMPLES`: 8 procedural demo scenes, deterministic |
+| `js/layouts.js` | 250 | `computeCells`, `USES_COLS`, `USES_SPAN`, `aspect` |
+| `js/render.js` | 207 | `refs`, `cacheRefs`, `currentCells`, `currentPlacement`, `drawStage` |
+| `js/compose.js` | 191 | `compose`, `exportThumb`, `exportBlob` |
+| `js/overlays.js` | 172 | `FONTS`, `makeText`, `PRESETS`, `drawOverlay`, `overlayAt` |
+| `js/gestures.js` | 154 | `wireStage` |
+| `js/editor-tools.js` | 147 | brush stamps, `wandErase`, alpha helpers, `bakeCut` |
+| `js/filters.js` | 141 | `PRESET_NAMES`, `fxKey`, `isIdentity`, `applyFx` |
+| `js/editor-input.js` | 134 | `wireInput`: editor pointer, wheel and keyboard |
+| `js/tools.js` | 128 | `removeBackground`, `makeThumb`, `tintThumb`, `batchThumbnails`, `fitAspect` |
+| `js/state.js` | 117 | `LAYOUTS`, `state`, `freshTf`, `addPhoto`, `removePhoto` |
+| `js/demos.js` | 109 | `wireDemos`: recipes over the demo art |
+| `js/store.js` | 101 | `saveSession`, `loadSession`, `resetSaveCache`, `clearSession` |
+| `js/history.js` | 88 | `mark`, `undo`, `redo`, `canUndo`, `canRedo` |
+| `js/presets.js` | 44 | `STYLES`, `applyStyle`, `toggleMono` |
+| `js/utils.js` | 40 | `$`, `showToast`, `echoRanges` |
+| `js/app.js` | 6 | none |
 
 Vendored from `packages/neorgon-ui/`: never edit in place, run the sync script instead: `js/neorgon-footer.js`, `js/neorgon-header.js`.
 
 ## Data
 
-No persisted state: everything lives in memory for the session.
+IndexedDB (db `mosaic`): store `photos` holds `{id, i, name, blob, span, tf,
+cutBlob}` rows (the original file blob plus, when a cutout exists, the baked
+PNG of it), store `meta` holds the arrangement under key `session` (layout,
+params, background, bg2, bgAngle, borderColor, overrides, overlays, schema 3).
+Old schema-2 sessions load fine: every new field defaults. Undo history is
+memory-only and resets on reload.
 
 ## Conventions
 
@@ -44,7 +57,30 @@ No persisted state: everything lives in memory for the session.
 
 ## Gotchas
 
-TODO: the non-obvious failures. What broke here before, what looks wrong but is deliberate, what a reasonable change would break. This is the highest-value section, leave it empty rather than filling it with generic advice.
+- **Responsive blocks live at the END of `css/style.css`, and must stay there.**
+  They override the base `.board`/`.rail`/`.side` rules at equal specificity,
+  so source order is the entire mechanism. They used to sit at the top of the
+  file, where the base rules silently beat them and phones rendered the canvas
+  in a 260px grid column.
+- **Every `compose()` caller must pass the full background opts** (`background`,
+  `bg2`, `bgAngle`, `borderColor`). The preview once omitted `bg2` and painted
+  gradients as solid while the export would have rendered them: the exact
+  preview/export drift contract 3 exists to prevent. Callers: `drawStage`,
+  `exportBlob` (via events), `exportThumb`.
+- **Adding a field to `state` means touching four serializers**: the
+  `js/history.js` snapshot AND restore, the `js/store.js` meta writer, and the
+  `restoreSession` reader in `js/events.js`. Missing one is silent: the field
+  works until the first undo or reload.
+- **The editor works on a capped copy** (`MAX_DIM = 4200` in `js/editor.js`):
+  three full-resolution RGBA buffers of a 48MP photo is over half a gigabyte.
+  A cutout made in the editor is at the capped resolution; `compose` scales it
+  into cells so nothing downstream notices.
+- **`ctx.filter` stays banned** (Safari ships it disabled): colour is matrix
+  math over ImageData in `js/filters.js`, and the editor previews colour by
+  re-baking through that same pipeline, never by CSS/canvas filters.
+- **The editor owns the keyboard while open.** Main-app shortcut handlers in
+  `js/events.js` early-return on `isEditorOpen()`; add new global shortcuts
+  behind that guard or they fire during brush work.
 
 ## Do not touch
 

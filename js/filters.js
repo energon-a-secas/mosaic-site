@@ -57,10 +57,20 @@ function hueRotate(deg) {
   ];
 }
 
+// Warm/cool white balance: push red up and blue down (or the reverse) around
+// the axis a photographer's temperature slider uses. t is -1..1.
+const temperature = (t) => [
+  1 + 0.24 * t, 0, 0, 0, 0,
+  0, 1 + 0.05 * t, 0, 0, 0,
+  0, 0, 1 - 0.24 * t, 0, 0,
+  0, 0, 0, 1, 0,
+];
+
 // The presets, expressed as matrices instead of CSS filter strings.
 const PRESETS = {
   none:  () => IDENTITY,
   mono:  () => grayscale(1),
+  noir:  () => grayscale(1),
   warm:  () => mul(sepia(0.28), saturate(1.25)),
   cool:  () => mul(hueRotate(-12), saturate(1.1)),
   faded: () => saturate(0.8),
@@ -71,6 +81,7 @@ export const PRESET_NAMES = Object.keys(PRESETS);
 // Brightness and contrast are scalar, so they ride alongside the matrix rather
 // than inside it; contrast pivots around mid-grey the way the CSS filter does.
 const EXTRA = {
+  noir:  { bright: 1.02, contrast: 1.38 },
   faded: { bright: 1.12, contrast: 0.85 },
   cool:  { bright: 1.04, contrast: 1 },
   punch: { bright: 1, contrast: 1.25 },
@@ -79,14 +90,14 @@ const EXTRA = {
 /** A stable signature, so a cached render is only rebuilt when something changed. */
 export function fxKey(tf) {
   const a = tf.adj || {};
-  return `${tf.filter}|${a.bright}|${a.contrast}|${a.sat}`;
+  return `${tf.filter}|${a.bright}|${a.contrast}|${a.sat}|${a.temp || 0}`;
 }
 
 /** True when the photo needs no colour work at all, so we can skip the pass. */
 export function isIdentity(tf) {
   const a = tf.adj || {};
   return (!tf.filter || tf.filter === 'none') &&
-    a.bright === 100 && a.contrast === 100 && a.sat === 100;
+    a.bright === 100 && a.contrast === 100 && a.sat === 100 && !(a.temp || 0);
 }
 
 /**
@@ -103,9 +114,10 @@ export async function applyFx(img, tf) {
   const id = ctx.getImageData(0, 0, cv.width, cv.height);
   const d = id.data;
 
-  const adj = tf.adj || { bright: 100, contrast: 100, sat: 100 };
+  const adj = tf.adj || { bright: 100, contrast: 100, sat: 100, temp: 0 };
   let m = (PRESETS[tf.filter] || PRESETS.none)();
   if (adj.sat !== 100) m = mul(saturate(adj.sat / 100), m);
+  if (adj.temp) m = mul(temperature(adj.temp / 100), m);
 
   const ex = EXTRA[tf.filter] || { bright: 1, contrast: 1 };
   const bright = (adj.bright / 100) * ex.bright;

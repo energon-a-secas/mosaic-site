@@ -44,31 +44,33 @@ let lastPhotoSig = '';
 
 export async function saveSession(state, { photos = true } = {}) {
   try {
+    const row = (p, i) => ({
+      id: p.id, i, name: p.name, blob: p.blob, span: p.span,
+      tf: { ...p.tf, adj: { ...p.tf.adj } },
+      // The cutout as a PNG blob: a hand-brushed mask is minutes of work and
+      // must survive a reload, unlike the bitmaps which decode from blobs.
+      cutBlob: p.cutBlob || null,
+    });
     const sig = state.pool.map((p) => p.id).join(',');
     if (photos && sig !== lastPhotoSig) {
       await tx('photos', 'readwrite', (s) => {
         s.clear();
-        state.pool.forEach((p, i) => s.put({
-          id: p.id, i, name: p.name, blob: p.blob, span: p.span,
-          tf: { ...p.tf, adj: { ...p.tf.adj } },
-        }));
+        state.pool.forEach((p, i) => s.put(row(p, i)));
       });
       lastPhotoSig = sig;
     } else {
       // Same photos, changed properties: update in place, no blob rewrite.
       await tx('photos', 'readwrite', (s) => {
-        state.pool.forEach((p, i) => s.put({
-          id: p.id, i, name: p.name, blob: p.blob, span: p.span,
-          tf: { ...p.tf, adj: { ...p.tf.adj } },
-        }));
+        state.pool.forEach((p, i) => s.put(row(p, i)));
       });
     }
     await tx('meta', 'readwrite', (s) => s.put({
       overrides: [...state.overrides], layout: state.layout,
       params: { ...state.params }, background: state.background,
+      bg2: state.bg2, bgAngle: state.bgAngle, borderColor: state.borderColor,
       nextId: state.nextId,
       overlays: state.overlays.map((o) => ({ ...o })),
-      schema: 2,
+      schema: 3,
     }, 'session'));
     return true;
   } catch {

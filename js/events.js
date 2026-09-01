@@ -1,16 +1,20 @@
 import { state, addPhoto, removePhoto, movePhoto, swapCells, selectedPhoto,
-         shufflePool, freshTf, addOverlay, removeOverlay, selectedOverlayObj } from './state.js';
-import { renderAll, drawStage, currentCells, currentPlacement, refs, syncHistory,
-         syncControls } from './render.js';
+         shufflePool, freshTf, addOverlay, removeOverlay, selectedOverlayObj,
+         byId } from './state.js';
+import { renderAll, drawStage, drawStrip, currentCells, currentPlacement, refs,
+         syncHistory, syncControls } from './render.js';
 import { exportBlob } from './compose.js';
 import { aspect } from './layouts.js';
-import { removeBackground, makeThumb, batchThumbnails, fitAspect } from './tools.js';
+import { makeThumb, tintThumb, batchThumbnails, fitAspect } from './tools.js';
 import * as H from './history.js';
 import { applyFx, fxKey, isIdentity } from './filters.js';
 import { makeText, PRESETS, FONTS } from './overlays.js';
 import { wireStage } from './gestures.js';
 import { saveSession, loadSession, clearSession } from './store.js';
-import { showToast as toast } from './utils.js';
+import { showToast as toast, echoRanges } from './utils.js';
+import { openEditor, isEditorOpen, wireEditor } from './editor.js';
+import { STYLES, applyStyle, styleSwatch, toggleMono } from './presets.js';
+import { wireDemos } from './demos.js';
 
 let dragFrom = null;      // strip reorder
 
@@ -75,9 +79,15 @@ function scheduleFx(photo, delay = 180) {
   fxTimer = setTimeout(async () => {
     const key = fxKey(photo.tf);
     if (photo.fxKey === key) return;
-    if (isIdentity(photo.tf)) { photo.fx = null; photo.fxKey = key; repaintStage(); return; }
+    if (isIdentity(photo.tf)) {
+      photo.fx = null; photo.fxKey = key;
+      photo.thumb = await makeThumb(photo.cut || photo.bitmap);
+      drawStrip(); repaintStage(); return;
+    }
     photo.fx = await applyFx(photo.cut || photo.bitmap, photo.tf);
     photo.fxKey = key;
+    photo.thumb = await tintThumb(photo);
+    drawStrip();
     repaintStage();
   }, delay);
 }
@@ -90,6 +100,7 @@ function scheduleSave() {
 function repaint() {
   lastFrame = renderAll();
   syncHistory(H.canUndo(), H.canRedo());
+  echoRanges();
   scheduleSave();
 }
 const repaintStage = () => { lastFrame = drawStage(); };
@@ -100,7 +111,7 @@ export function wire() {
   // ── import ────────────────────────────────────────────────────────────────
   const file = document.querySelector('#file');
   document.querySelector('[data-act="add"]').addEventListener('click', () => file.click());
-  document.querySelector('#empty').addEventListener('click', () => file.click());
+  document.querySelector('#emptyChoose').addEventListener('click', () => file.click());
   file.addEventListener('change', () => { ingest(file.files); file.value = ''; });
 
   const stop = (e) => { e.preventDefault(); e.stopPropagation(); };
@@ -135,6 +146,9 @@ export function wire() {
       const k = el.dataset.param;
       if (k === 'ratio') state.params.ratio = el.value;
       else if (k === 'background') state.background = el.value;
+      else if (k === 'bg2') state.bg2 = el.value;
+      else if (k === 'bgangle') state.bgAngle = Number(el.value);
+      else if (k === 'borderColor') state.borderColor = el.value;
       else state.params[k] = Number(el.value);
       // Stage only. A layout slider does not change any thumbnail, and rebuilding
       // twenty canvases per input event is the single worst hitch in the app.
@@ -149,6 +163,8 @@ export function wire() {
   refs.strip.addEventListener('click', (e) => {
     const del = e.target.closest('[data-del]');
     if (del) { edit(() => removePhoto(del.dataset.del)); return; }
+    const edp = e.target.closest('[data-edit]');
+    if (edp) { openEditor(byId(edp.dataset.edit)); return; }
     const li = e.target.closest('.thumb');
     if (!li) return;
     state.selected = state.selected === li.dataset.id ? null : li.dataset.id;
@@ -168,6 +184,13 @@ export function wire() {
 
   wireStage({ repaint, repaintStage, edit, lastFrameRef: () => lastFrame,
               cellAt, scheduleFxIfNeeded });
+
+  // Double-clicking a photo on the canvas is the fast lane into the editor.
+  refs.canvas.addEventListener('dblclick', (e) => {
+    const i = cellAt(e);
+    const p = i >= 0 ? lastFrame.placement[i] : null;
+    if (p) openEditor(p);
+  });
 
   // ── inspector ─────────────────────────────────────────────────────────────
   const ins = refs.inspector;
@@ -197,36 +220,42 @@ export function wire() {
       return;
     }
     const act = e.target.closest('[data-act]')?.dataset.act;
-    if (act === 'reset') { edit(() => { p.tf = freshTf(); }); scheduleFx(p, 0); } else if (act === 'cutout') {
-      const btn = e.target.closest('[data-act]');
-      btn.disabled = true; btn.textContent = 'Working…';
-      const tol = Number(ins.querySelector('[data-tol]').value);
-      const out = await removeBackground(p.bitmap, tol);
-      btn.disabled = false; btn.textContent = 'Remove background';
-      if (!out) { toast('No flat background found. Try a higher tolerance.'); return; }
-      H.mark(state); p.cut = out; p.fxKey = null; p.thumb = await makeThumb(out); repaint(); scheduleFx(p, 0);
-    } else if (act === 'hero') {
+    if (act === 'reset') { edit(() => { p.tf = freshTf(); }); scheduleFx(p, 0); }
+    else if (act === 'editphoto') { openEditor(p); }
+    else if (act === 'hero') {
       edit(() => { p.span = p.span === 2 ? 1 : 2; });
     } else if (act === 'fit') {
       edit(() => fitAspect(p, 1));
-    } else if (act === 'restore') {
-      H.mark(state); p.cut = null; p.fxKey = null; p.thumb = await makeThumb(p.bitmap); repaint(); scheduleFx(p, 0);
     }
   });
 
   // ── export ────────────────────────────────────────────────────────────────
+  let exportFmt = 'png';
+  document.querySelectorAll('[data-fmt]').forEach((b) => {
+    b.setAttribute('aria-pressed', String(b.classList.contains('is-on')));
+    b.addEventListener('click', () => {
+      exportFmt = b.dataset.fmt;
+      document.querySelectorAll('[data-fmt]').forEach((x) => {
+        x.classList.toggle('is-on', x === b);
+        x.setAttribute('aria-pressed', String(x === b));
+      });
+    });
+  });
   document.querySelectorAll('[data-export]').forEach((b) => {
     b.addEventListener('click', async () => {
       if (!state.pool.length) { toast('Add a photo first'); return; }
       const px = Number(b.dataset.export);
       const cells = currentCells();
+      const type = exportFmt === 'jpeg' ? 'image/jpeg' : 'image/png';
       const blob = await exportBlob(cells, currentPlacement(cells), {
-        background: state.background, params: state.params, overlays: state.overlays,
+        background: state.background, bg2: state.bg2, bgAngle: state.bgAngle,
+        borderColor: state.borderColor,
+        params: state.params, overlays: state.overlays,
         ar: aspect(state.params.ratio), previewW: lastFrame.W,
-      }, px);
+      }, px, type);
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = `mosaic-${state.layout}-${px}px.png`;
+      a.download = `mosaic-${state.layout}-${px}px.${exportFmt === 'jpeg' ? 'jpg' : 'png'}`;
       a.click();
       setTimeout(() => URL.revokeObjectURL(a.href), 4000);
       toast(`Exported at ${px}px wide`);
@@ -255,16 +284,65 @@ export function wire() {
       if (!state.pool.length) { toast('Add photos first'); return; }
       const size = Number(b.dataset.thumbs);
       b.disabled = true;
-      const n = await batchThumbnails(state.pool, size, state.background,
+      const n = await batchThumbnails(state.pool, size,
+        { background: state.background, bg2: state.bg2, bgAngle: state.bgAngle },
         (i, t) => { b.textContent = `${i}/${t}`; });
       b.disabled = false; b.textContent = `${size}px`;
       toast(`Saved ${n} thumbnail${n > 1 ? 's' : ''}`);
     });
   });
 
+  // ── canvas styles, gradient toggle, all black and white ───────────────────
+  const styleWrap = document.querySelector('[data-styles]');
+  STYLES.forEach((s) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'chip chip--style';
+    const sw = document.createElement('span');
+    sw.className = 'swatch';
+    sw.style.background = styleSwatch(s);
+    b.append(sw, document.createTextNode(s.name));
+    b.addEventListener('click', () => edit(() => applyStyle(state, s)));
+    styleWrap.appendChild(b);
+  });
+  document.querySelector('[data-act="bgmode"]').addEventListener('click', () => {
+    edit(() => { state.bg2 = state.bg2 ? null : '#7c3aed'; });
+  });
+  document.querySelector('[data-act="allbw"]').addEventListener('click', () => {
+    if (!state.pool.length) { toast('Add photos first'); return; }
+    H.mark(state);
+    const on = toggleMono(state.pool);
+    // One shared debounce timer cannot serve twenty photos, so bake in order,
+    // repainting as each lands: the collage turns black and white progressively.
+    // The batch is a snapshot: a photo removed mid-bake must not make the live
+    // for...of skip its neighbour, and a key captured before the await keeps a
+    // mid-bake filter change from stamping stale pixels as current.
+    const batch = [...state.pool];
+    (async () => {
+      for (const p of batch) {
+        if (!state.pool.includes(p)) continue;
+        const key = fxKey(p.tf);
+        const fx = isIdentity(p.tf) ? null : await applyFx(p.cut || p.bitmap, p.tf);
+        if (!state.pool.includes(p) || fxKey(p.tf) !== key) continue;
+        p.fx = fx;
+        p.fxKey = key;
+        p.thumb = await tintThumb(p);
+        repaintStage();
+      }
+      drawStrip();
+    })();
+    repaint();
+    toast(on ? 'Everything black and white' : 'Colour restored');
+  });
+
+  // ── demos and the focus editor ────────────────────────────────────────────
+  wireDemos({ repaint });
+  wireEditor({ onApplied: (p) => { repaint(); scheduleFx(p, 0); } });
+
   // ── keyboard ──────────────────────────────────────────────────────────────
   // Single-key bindings stay off text fields so typing never triggers them.
+  // The focus editor owns the keyboard while it is open.
   addEventListener('keydown', (e) => {
+    if (isEditorOpen()) return;
     const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName);
     const mod = e.metaKey || e.ctrlKey;
     if (mod && e.key.toLowerCase() === 'z') {
@@ -362,7 +440,9 @@ export function wire() {
   }));
   document.querySelectorAll('[data-sheet-close]').forEach((b) =>
     b.addEventListener('click', closeSheets));
-  addEventListener('keydown', (ev) => { if (ev.key === 'Escape') closeSheets(); });
+  addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape' && !isEditorOpen()) closeSheets();
+  });
   // A layout choice on a phone should show its result, not stay buried.
   document.querySelectorAll('[data-layout]').forEach((b) =>
     b.addEventListener('click', () => { if (innerWidth <= 780) closeSheets(); }));
@@ -381,8 +461,13 @@ async function restoreSession() {
       const p = addPhoto({ bitmap: bmp, name: row.name, blob: row.blob, id: row.id });
       p.span = row.span || 1;
       p.tf = { ...freshTf(), ...row.tf, adj: { ...freshTf().adj, ...(row.tf?.adj || {}) } };
-      p.thumb = await makeThumb(bmp);
-      if (!isIdentity(p.tf)) { p.fx = await applyFx(bmp, p.tf); p.fxKey = fxKey(p.tf); }
+      if (row.cutBlob) {
+        // A corrupt stored cutout must not block the photo itself.
+        try { p.cut = await createImageBitmap(row.cutBlob); p.cutBlob = row.cutBlob; }
+        catch { /* keep the photo, lose the cutout */ }
+      }
+      p.thumb = await tintThumb(p);
+      if (!isIdentity(p.tf)) { p.fx = await applyFx(p.cut || bmp, p.tf); p.fxKey = fxKey(p.tf); }
     }
     // Keep minting above every restored id, or the next import collides with one.
     const maxN = saved.rows.reduce((n, r) => Math.max(n, parseInt(String(r.id).slice(1), 10) || 0), 0);
@@ -393,6 +478,9 @@ async function restoreSession() {
       state.layout = m.layout || state.layout;
       state.params = { ...state.params, ...(m.params || {}) };
       state.background = m.background || state.background;
+      state.bg2 = m.bg2 ?? null;
+      state.bgAngle = m.bgAngle ?? 135;
+      state.borderColor = m.borderColor || '#ffffff';
       state.nextId = Math.max(state.nextId, m.nextId || 0);
       state.overlays = (m.overlays || []).map((o) => ({ ...o }));
     }

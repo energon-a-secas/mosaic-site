@@ -56,6 +56,7 @@ export function wireStage({ repaint, repaintStage, edit, lastFrameRef, cellAt, s
         photo: p, sx: e.clientX, sy: e.clientY,
         ox: p.tf.ox, oy: p.tf.oy,
         cw: cell.w * lf().W, ch: cell.h * lf().H,
+        rot: cell.rot || 0,
       };
       H.mark(state);
       canvas.setPointerCapture?.(e.pointerId);
@@ -81,9 +82,17 @@ export function wireStage({ repaint, repaintStage, edit, lastFrameRef, cellAt, s
       const p = panDrag.photo;
       // ox/oy are fractions of the CELL, so a pixel delta divides by cell size.
       // Flip inverts the axis, or the photo would run away from the pointer.
+      // A scatter cell is rotated, so the screen delta first rotates into the
+      // cell's own frame or a horizontal drag drifts diagonally.
+      let dx = e.clientX - panDrag.sx, dy = e.clientY - panDrag.sy;
+      if (panDrag.rot) {
+        const a = (-panDrag.rot * Math.PI) / 180, c = Math.cos(a), s = Math.sin(a);
+        const rx = dx * c - dy * s, ry = dx * s + dy * c;
+        dx = rx; dy = ry;
+      }
       const fx = p.tf.flipH ? -1 : 1, fy = p.tf.flipV ? -1 : 1;
-      p.tf.ox = panDrag.ox + ((e.clientX - panDrag.sx) / panDrag.cw) * fx;
-      p.tf.oy = panDrag.oy + ((e.clientY - panDrag.sy) / panDrag.ch) * fy;
+      p.tf.ox = panDrag.ox + (dx / panDrag.cw) * fx;
+      p.tf.oy = panDrag.oy + (dy / panDrag.ch) * fy;
       clampPan(p);
       repaintStage();
       return;
@@ -103,7 +112,10 @@ export function wireStage({ repaint, repaintStage, edit, lastFrameRef, cellAt, s
   canvas.addEventListener('pointerup', (e) => {
     endPointer(e);
     if (ovlDrag) { ovlDrag = null; repaint(); return; }
-    if (panDrag) { panDrag = null; drawInspectorOnly(); repaint(); return; }
+    // repaint() must always run here: it is what syncs the inspector, the
+    // undo buttons and the save debounce after a reframe. A stray call to a
+    // never-defined helper used to throw first and skip all three.
+    if (panDrag) { panDrag = null; repaint(); return; }
     if (cellDrag === null) return;
     const j = cellAt(e);
     if (j >= 0 && j !== cellDrag) edit(() => swapCells(cellDrag, j, lf().placement));

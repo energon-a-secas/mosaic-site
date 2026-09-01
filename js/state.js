@@ -6,14 +6,17 @@
 // app refuses. Here the pool is the truth, the layout is a pure function of how
 // many photos there are, and placement is re-derived on every change.
 
-export const LAYOUTS = ['grid', 'masonry', 'strip', 'heart', 'circle', 'diamond', 'star', 'spiral', 'wave'];
+export const LAYOUTS = ['grid', 'masonry', 'scatter', 'strip', 'heart', 'circle', 'diamond', 'star', 'spiral', 'wave'];
 
 export const state = {
   pool: [],              // Photo[] — ordered, stable ids, layout-agnostic
   overrides: new Map(),  // cellIndex -> photoId, only explicit user swaps
   layout: 'grid',
-  params: { cols: 3, gap: 12, radius: 8, pad: 24, ratio: '16:9' },
+  params: { cols: 3, gap: 12, radius: 8, pad: 24, ratio: '16:9', border: 0 },
   background: '#0f1214',
+  bg2: null,             // second colour: when set, the canvas is a gradient
+  bgAngle: 135,          // gradient direction, degrees
+  borderColor: '#ffffff',
   overlays: [],          // contract 2a, ordered back to front
   selectedOverlay: null,
   selected: null,        // photoId
@@ -22,7 +25,7 @@ export const state = {
 
 export const freshTf = () => ({
   zoom: 1, ox: 0, oy: 0, rot: 0, flipH: false, flipV: false, filter: 'none',
-  adj: { bright: 100, contrast: 100, sat: 100 },
+  adj: { bright: 100, contrast: 100, sat: 100, temp: 0 },
 });
 
 export function addPhoto({ bitmap, name, blob, id }) {

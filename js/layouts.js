@@ -86,6 +86,30 @@ function masonry(n, { cols, gap, pad, ar }) {
   ));
 }
 
+// Scatter: an overlapping pile, like prints spread on a table. Cells are
+// oversized so neighbours overlap, and each carries a small rotation. All
+// jitter is index-keyed (layouts must stay pure), so the same pool always
+// gives the same pile. Hit-testing stays axis-aligned; at 12 degrees the
+// corner error grows with cell size (tens of pixels on a large canvas),
+// accepted for selection clicks because cell interiors dominate.
+function scatter(n, { pad, ar }) {
+  const cols = Math.max(1, Math.round(Math.sqrt(n * ar)));
+  const rows = Math.max(1, Math.ceil(n / cols));
+  const py = vy(pad, ar);
+  const cw = (1 - 2 * pad) / cols;
+  const ch = (1 - 2 * py) / rows;
+  const w = cw * 1.26, h = ch * 1.22;
+  return Array.from({ length: n }, (_, i) => {
+    const r = (i / cols) | 0, c = i % cols;
+    const jx = (((i * 37) % 21) / 21 - 0.5) * cw * 0.30;
+    const jy = (((i * 53) % 17) / 17 - 0.5) * ch * 0.26;
+    const cx = pad + (c + 0.5) * cw + jx;
+    const cy = py + (r + 0.5) * ch + jy;
+    const rot = ((i * 41) % 25) - 12;
+    return cell(cx - w / 2, cy - h / 2, w, h, { rot });
+  });
+}
+
 function strip(n, { gap, pad, ar }) {
   const w = (1 - 2 * pad + gap) / Math.max(n, 1) - gap;
   const py = vy(pad, ar);
@@ -199,7 +223,7 @@ const wave = (n, p) => onCurve(n, (t) => ({
   x: t * 2 - 1, y: Math.sin(t * Math.PI * 2) * 0.55,
 }), p);
 
-const FNS = { grid, masonry, strip, heart, circle, diamond, star, spiral, wave };
+const FNS = { grid, masonry, scatter, strip, heart, circle, diamond, star, spiral, wave };
 
 /**
  * Cells for `n` photos. Pure: same inputs, same cells, no state, no photos.
