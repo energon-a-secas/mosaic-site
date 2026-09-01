@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1560 900" width="1560" height="900" font-family="'Avenir Next','Segoe UI',Roboto,sans-serif">
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="42%" r="62%">
+      <stop offset="0%" stop-color="#1a1040" stop-opacity=".85"/>
+      <stop offset="55%" stop-color="#0a0a24" stop-opacity=".45"/>
+      <stop offset="100%" stop-color="#040714" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="soft" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="9"/>
+    </filter>
+  </defs>
+  <rect width="1560" height="900" fill="#040714"/>
+  <rect width="1560" height="900" fill="url(#glow)"/>
+  
+  <text x="110" y="96" fill="#B015B0" font-size="20" font-weight="700" letter-spacing="3.4">THE EDITOR</text>
+  <text x="110" y="144" fill="#f9f9f9" font-size="42" font-weight="700" letter-spacing="-.4">A cutout is an opinion about alpha</text>
+  <text x="110" y="180" fill="rgba(255,255,255,.46)" font-size="21">Tools argue with the mask; the photo itself is never touched</text>
+    <rect x="110" y="280" width="340" height="240" rx="16" fill="rgba(255,255,255,.05)" stroke="rgba(255,255,255,.16)" stroke-width="1.5"/>
+    <text x="280" y="354" text-anchor="middle" fill="#B015B0" font-size="30" font-weight="700" letter-spacing="2">SOURCE</text>
+    <text x="280" y="402" text-anchor="middle" fill="#f9f9f9" font-size="24">original pixels</text>
+    <text x="280" y="438" text-anchor="middle" fill="rgba(255,255,255,.46)" font-size="21">never modified</text>
+    <rect x="610" y="280" width="340" height="240" rx="16" fill="rgba(255,255,255,.05)" stroke="rgba(255,255,255,.16)" stroke-width="1.5"/>
+    <text x="780" y="354" text-anchor="middle" fill="#B015B0" font-size="30" font-weight="700" letter-spacing="2">MASK</text>
+    <text x="780" y="402" text-anchor="middle" fill="#f9f9f9" font-size="24">alpha only</text>
+    <text x="780" y="438" text-anchor="middle" fill="rgba(255,255,255,.46)" font-size="21">opaque = kept</text>
+    <rect x="1110" y="280" width="340" height="240" rx="16" fill="rgba(255,255,255,.05)" stroke="rgba(255,255,255,.16)" stroke-width="1.5"/>
+    <text x="1280" y="354" text-anchor="middle" fill="#B015B0" font-size="30" font-weight="700" letter-spacing="2">VIEW</text>
+    <text x="1280" y="402" text-anchor="middle" fill="#f9f9f9" font-size="24">source through mask</text>
+    <text x="1280" y="438" text-anchor="middle" fill="rgba(255,255,255,.46)" font-size="21">what you see</text>
+    <line x1="450" y1="400" x2="596" y2="400" stroke="rgba(255,255,255,.62)" stroke-width="2.5"/>
+    <path d="M 596 393 L 610 400 L 596 407 Z" fill="rgba(255,255,255,.62)"/>
+    <text x="530" y="384" text-anchor="middle" fill="rgba(255,255,255,.46)" font-size="19">colour pass reads it</text>
+    <line x1="950" y1="400" x2="1096" y2="400" stroke="rgba(255,255,255,.62)" stroke-width="2.5"/>
+    <path d="M 1096 393 L 1110 400 L 1096 407 Z" fill="rgba(255,255,255,.62)"/>
+    <text x="1030" y="384" text-anchor="middle" fill="rgba(255,255,255,.46)" font-size="19">destination-in</text>
+    <line x1="780" y1="560" x2="780" y2="528" stroke="rgba(255,255,255,.62)" stroke-width="2.5"/>
+    <path d="M 773 542 L 780 528 L 787 542 Z" fill="rgba(255,255,255,.62)"/><text x="780" y="604" text-anchor="middle" fill="rgba(255,255,255,.62)" font-size="21">erase brush: alpha down</text><text x="780" y="642" text-anchor="middle" fill="rgba(255,255,255,.62)" font-size="21">restore brush: alpha up</text><text x="780" y="680" text-anchor="middle" fill="rgba(255,255,255,.62)" font-size="21">wand: flood fill to zero</text><text x="780" y="718" text-anchor="middle" fill="rgba(255,255,255,.62)" font-size="21">auto: edge fill to zero</text><text x="110" y="640" fill="rgba(255,255,255,.46)" font-size="19">colour presets, imported</text><text x="110" y="670" fill="rgba(255,255,255,.46)" font-size="19">from js/filters.js:</text><text x="110" y="710" fill="#f9f9f9" font-size="21" font-weight="600">none · mono · noir · warm · cool · faded · punch</text><text x="110" y="860" fill="rgba(255,255,255,.34)" font-size="17">Done bakes source x mask into the collage; Save exports it alone. Both read the same mask.</text>
+</svg>

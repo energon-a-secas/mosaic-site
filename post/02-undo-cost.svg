@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1560 760" width="1560" height="760" font-family="'Avenir Next','Segoe UI',Roboto,sans-serif">
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="42%" r="62%">
+      <stop offset="0%" stop-color="#1a1040" stop-opacity=".85"/>
+      <stop offset="55%" stop-color="#0a0a24" stop-opacity=".45"/>
+      <stop offset="100%" stop-color="#040714" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="soft" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="9"/>
+    </filter>
+  </defs>
+  <rect width="1560" height="760" fill="#040714"/>
+  <rect width="1560" height="760" fill="url(#glow)"/>
+  
+  <text x="110" y="96" fill="#B015B0" font-size="20" font-weight="700" letter-spacing="3.4">UNDO</text>
+  <text x="110" y="144" fill="#f9f9f9" font-size="42" font-weight="700" letter-spacing="-.4">What one brush stroke costs to remember</text>
+  <text x="110" y="180" fill="rgba(255,255,255,.46)" font-size="21">On a 12 megapixel photo, 4032 x 3024</text>
+    <text x="436" y="332.24" text-anchor="end" fill="#f9f9f9" font-size="24" font-weight="600">full RGBA snapshot</text>
+    <rect x="470" y="300" width="860" height="52" rx="9" fill="rgba(255,255,255,.05)"/>
+    <rect x="470" y="300" width="860.0" height="52" rx="9" fill="#B015B0" fill-opacity=".55"/>
+    <text x="1358" y="335.36" fill="rgba(255,255,255,.62)" font-size="26" font-weight="700">46.5 MB</text>
+    <text x="470" y="386" fill="rgba(255,255,255,.46)" font-size="19">the naive undo</text>
+    <text x="436" y="462.24" text-anchor="end" fill="#f9f9f9" font-size="24" font-weight="600">alpha only, full frame</text>
+    <rect x="470" y="430" width="860" height="52" rx="9" fill="rgba(255,255,255,.05)"/>
+    <rect x="470" y="430" width="215.0" height="52" rx="9" fill="#B015B0" fill-opacity=".55"/>
+    <text x="1358" y="465.36" fill="rgba(255,255,255,.62)" font-size="26" font-weight="700">11.6 MB</text>
+    <text x="470" y="516" fill="rgba(255,255,255,.46)" font-size="19">better, still per stroke</text>
+    <text x="436" y="592.24" text-anchor="end" fill="#f9f9f9" font-size="24" font-weight="600">alpha diff, stroke box</text>
+    <rect x="470" y="560" width="860" height="52" rx="9" fill="rgba(255,255,255,.05)"/>
+    <rect x="470" y="560" width="6.0" height="52" rx="9" fill="#B015B0" fill-opacity="1"/>
+    <text x="1358" y="595.36" fill="#f9f9f9" font-size="26" font-weight="700">142 KB</text>
+    <text x="470" y="646" fill="rgba(255,255,255,.46)" font-size="19">what Mosaic stores</text><text x="110" y="720" fill="rgba(255,255,255,.34)" font-size="17">Computed at build: width x height x bytes. The stroke box is the default 48px brush swept a third of the frame.</text>
+</svg>

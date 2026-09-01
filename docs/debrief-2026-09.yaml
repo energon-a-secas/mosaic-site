@@ -1,0 +1,142 @@
+presentation:
+  title: "Mosaic: from collage maker to photo studio"
+  subtitle: "Change readout · focus editor, manual cutout, styles, demos"
+  author: "LucianoAdonis"
+  date: "2026-09"
+  audience: mixed
+  outcome: approve
+  duration: 15
+  big_idea: "Professional photo editing that never leaves the browser."
+  footer: "mosaic.neorgon.com"
+
+  slides:
+    - type: title
+      heading: "Mosaic: from collage maker to photo studio"
+      subtitle: "Focus editor · manual background removal · styles · demos"
+
+    - type: bullets
+      heading: "Editing was the weak half"
+      bullets:
+        - "All editing lived in a 300px sidebar"
+        - "Background removal: one shot, no fixing its mistakes"
+        - "No way to save one edited photo"
+        - "First visit: an empty canvas, nothing to click"
+      note: "From .forge/brief.md, written during the work. The collage half was already strong: nine layouts, one render path, per-photo framing that survives layout changes. The ask was to reach a professional bar for photo collage AND edition, with everything local."
+
+    - type: divider
+      heading: "Cool collages first"
+      subtitle: "scatter, styles, gradients, demos"
+
+    - type: media
+      heading: "One click to a finished look"
+      src: "./debrief-2026-09-img/mosaic-postcards.png"
+      alt: "Mosaic showing the postcards demo: rotated prints with white borders and shadows on a paper background"
+      side: right
+      fit: contain
+      bullets:
+        - "Scatter layout: rotated prints, real shadows"
+        - "Seven styles set the whole canvas"
+        - "Gradient backgrounds, photo borders"
+        - "Demos drawn in the browser, nothing downloaded"
+      caption: "The postcards demo, one click from an empty first visit"
+      note: "The eight sample photos are procedural canvas drawings (js/demo-art.js, 421 lines, deterministic, no copyright). Four recipes: postcards, heart, meme, wall. With photos loaded, a demo asks for a confirming second click and the chip shows an armed state."
+
+    - type: image
+      heading: "Demos teach the product"
+      src: "./debrief-2026-09-img/mosaic-meme.png"
+      alt: "The meme demo: a night skyline with Impact-style captions top and bottom"
+      fit: contain
+      caption: "Each recipe only turns knobs the user has: a demo is also a lesson"
+      note: "The meme recipe loads one photo, grid with one column, square canvas, noir style, and two caption overlays. Overlays are positioned in canvas fractions, so they survive every layout change (contract 2a)."
+
+    - type: divider
+      heading: "Then a real editor"
+      subtitle: "remove exactly what you point at"
+
+    - type: media
+      heading: "Manual cutout, local pixels"
+      src: "./debrief-2026-09-img/mosaic-editor.png"
+      alt: "The focus editor with an erase stroke revealing the transparency checkerboard across a night sky"
+      side: right
+      fit: contain
+      bullets:
+        - "Erase and restore, soft brushes"
+        - "Magic wand removes the colour you click"
+        - "Auto edge fill as a starting point"
+        - "Per-stroke undo, zoom to the pixel"
+        - "Save the photo alone: PNG or JPEG"
+      caption: "No service, no upload: every byte stays in the page"
+      note: "Entry points: double-click a photo on the canvas, the pencil on a thumbnail, or the accent button at the top of the inspector. B&W is the mono and noir presets plus a warmth slider; cutouts persist to IndexedDB and survive reload."
+
+    - type: bullets
+      heading: "Why the editor cannot lie"
+      bullets:
+        - "Three canvases: source, mask, view"
+        - "Undo stores alpha diffs per stroke"
+        - "Colour runs the collage's own pipeline"
+        - "One render path: preview equals file"
+      note: "ctx.filter stays banned (Safari ships it disabled), so colour is matrix math over ImageData in filters.js, and the editor previews by re-baking through that same pipeline. Photos over 4200px on the long edge are edited on a capped working copy; three full-resolution RGBA buffers of a 48MP shot is over half a gigabyte."
+
+    - type: divider
+      heading: "Reviewed like a product"
+      subtitle: "three subagents, findings verified before fixing"
+
+    - type: quote
+      text: "It currently fails the Canva-bar test on feedback loops rather than on looks."
+      source: "Design review, before the fix round"
+      note: "The designer's verdict on the mid-campaign build. The named gaps: selection had no canvas presence, the reframe gesture threw, Clear was invisible, the editor hid below the fold. All four shipped fixed; the selection ring was its single change that moves it most."
+
+    - type: bullets
+      heading: "What review caught, now fixed"
+      bullets:
+        - "Canvas clicks threw an error since August"
+        - "Phones rendered a 260px canvas sliver"
+        - "Clear was white text on white"
+        - "Selection now shows a ring on canvas"
+        - "Undone cutouts resurrected on reload"
+      note: "The first three are pre-existing defects, not from this change: drawInspectorOnly was never defined (gestures.js, committed Aug 17), the responsive CSS lost to source order, and .btn--ghost is authored for dark surfaces. The code review also drove identity guards on async editor paths, a rotated pan delta for scatter cells, and an incremental alpha mirror replacing 53MB-per-stroke reads."
+
+    - type: stats
+      heading: "Measured, not remembered"
+      background: ocean
+      stats:
+        - value: "15/15"
+          label: "QA checklist items passed with evidence"
+        - value: "366,194"
+          label: "Pixels one wand click removed"
+        - value: "0"
+          label: "Console errors across three passes"
+        - value: "2,122"
+          label: "Lines added in the feature commit"
+      note: "QA ran in its own browser and verified effects, not clicks: state values, pixel samples, real export bytes (PNG 89 50 4e 47, JPEG ff d8). The wand census counted alpha channels: 366,194 fully transparent, 2,319 feathered edge pixels on a 1200x900 sample."
+
+    - type: bullets
+      heading: "What it cost"
+      bullets:
+        - "Editor works on a 4200px working copy"
+        - "Every save rewrites cutout blobs"
+        - "Six new modules, largest file 495 lines"
+        - "Chip verbs vs radios: deferred redesign"
+      note: "The 500-line file rule held but forced a split: editor input wiring moved to js/editor-input.js when fixes pushed editor.js to 565. The save amplification is a pre-existing shape (original blobs were already rewritten per save); a real fix separates arrangement from blobs in IndexedDB."
+
+    - type: checklist
+      heading: "Still open"
+      items:
+        - label: "Publish to mosaic.neorgon.com"
+          state: todo
+          note: "Committed on main, not pushed; your call"
+        - label: "Registry blurb undersells the site now"
+          state: todo
+          note: "Positioning decision, then make registry"
+        - label: "Multi-tab autosave overwrites itself"
+          state: todo
+          note: "Pre-existing; needs cross-tab invalidation"
+        - label: "Cutout save amplification"
+          state: todo
+          note: "Split blobs from arrangement in IndexedDB"
+      note: "Transcribed from the brief's Open section. Nothing here blocks daily use; the first two are decisions, the last two are pre-existing engineering debt now written down."
+
+    - type: cta
+      heading: "Ship it"
+      action: "Push main, then refresh the registry blurb"
+      subtext: "Everything else is committed, reviewed, and measured."
