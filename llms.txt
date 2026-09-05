@@ -1,6 +1,6 @@
 # Mosaic
 
-> Build photo collages that stay editable: change the grid, shape or column count at any time without losing the photos you already placed
+> Build photo collages and edit the photos inside them: erase backgrounds by hand, go black and white, change the layout without losing a thing
 
 - Live: https://mosaic.neorgon.com/
 - Part of the Neorgon tool suite (free, no signup, runs in your browser): https://neorgon.com/

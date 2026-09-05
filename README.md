@@ -2,7 +2,7 @@
 
 # Mosaic
 
-Build photo collages that stay editable
+Build photo collages, and edit the photos inside them
 
 [![Live][badge-site]][url-site]
 [![HTML5][badge-html]][url-html]
