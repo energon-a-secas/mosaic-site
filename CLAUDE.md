@@ -18,7 +18,7 @@ Then open http://localhost:8867. It must be served over HTTP. The app is ES modu
 
 | Module | Lines | Owns |
 |---|---:|---|
-| `js/events.js` | 495 | `wire` |
+| `js/events.js` | 492 | `wire` |
 | `js/editor.js` | 468 | focus editor session, ops, `openEditor`, `isEditorOpen`, `wireEditor` |
 | `js/demo-art.js` | 421 | `SAMPLES`: 8 procedural demo scenes, deterministic |
 | `js/layouts.js` | 250 | `computeCells`, `USES_COLS`, `USES_SPAN`, `aspect` |
@@ -32,11 +32,17 @@ Then open http://localhost:8867. It must be served over HTTP. The app is ES modu
 | `js/tools.js` | 128 | `removeBackground`, `makeThumb`, `tintThumb`, `batchThumbnails`, `fitAspect` |
 | `js/state.js` | 117 | `LAYOUTS`, `state`, `freshTf`, `addPhoto`, `removePhoto` |
 | `js/demos.js` | 109 | `wireDemos`: recipes over the demo art |
-| `js/store.js` | 101 | `saveSession`, `loadSession`, `resetSaveCache`, `clearSession` |
+| `js/store.js` | 138 | `saveSession`, `loadSession`, `resetSaveCache`, `clearSession`, `CONFLICT` |
 | `js/history.js` | 88 | `mark`, `undo`, `redo`, `canUndo`, `canRedo` |
+| `js/register-sw.js` | 62 | `registerServiceWorker`: registration and the update handshake |
+| `js/autosave.js` | 31 | `scheduleSave`, `sessionLost`, `resumeSaving`: the debounce and the two-tab rule |
 | `js/presets.js` | 44 | `STYLES`, `applyStyle`, `toggleMono` |
 | `js/utils.js` | 40 | `$`, `showToast`, `echoRanges` |
 | `js/app.js` | 6 | none |
+
+Offline (root, not in `js/`): `sw.js` is the worker, `sw-kill.js` is the rollback.
+The precache array between the `PRECACHE-BEGIN/END` markers in `sw.js` is checked
+by `scripts/check-precache.py` and by smoke check 27; nothing rewrites it for you.
 
 Vendored from `packages/neorgon-ui/`: never edit in place, run the sync script instead: `js/neorgon-footer.js`, `js/neorgon-header.js`.
 
@@ -78,6 +84,26 @@ memory-only and resets on reload.
 - **`ctx.filter` stays banned** (Safari ships it disabled): colour is matrix
   math over ImageData in `js/filters.js`, and the editor previews colour by
   re-baking through that same pipeline, never by CSS/canvas filters.
+- **A save can be refused, and the caller must handle it.** `saveSession` returns
+  `CONFLICT` when another tab has written since this one last synced. It is one
+  transaction over both stores that reads the generation and aborts on a
+  mismatch, because the pools cannot be merged and the old clear-then-put
+  destroyed whichever tab saved second. `js/autosave.js` stops autosaving and
+  says so; do not "fix" this by retrying.
+- **The service worker never caches cross-origin.** `cdn.neorgon.org` sends no
+  CORS headers, so the only way to store `base.css` is an opaque response,
+  which is unverifiable and padded by megabytes against the same quota that
+  holds the user's photos. Offline the page loses 16 spacing and type tokens
+  and looks worse; it stays usable. `projects/neorgon-cdn-site/scripts/setup-r2-cors.sh`
+  fixes it at the source, and once that has run those assets can be precached.
+- **To roll back offline support, deploy `sw-kill.js` as `sw.js`.** Deleting
+  `sw.js` does not reliably unregister an installed worker, so a service worker
+  is the one deploy artifact `git revert` cannot retract.
+- **Code is network-first, on purpose.** The ES-module graph is all-or-nothing:
+  one stale module with a renamed export white-screens the app. The
+  `cache: 'no-cache'` in `sw.js` is load-bearing, since without it the browser's
+  own HTTP cache answers the worker's fetch and network-first silently becomes
+  cache-first.
 - **The editor owns the keyboard while open.** Main-app shortcut handlers in
   `js/events.js` early-return on `isEditorOpen()`; add new global shortcuts
   behind that guard or they fire during brush work.

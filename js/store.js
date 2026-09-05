@@ -42,6 +42,22 @@ const tx = async (store, mode, fn) => {
  */
 let lastPhotoSig = '';
 
+/**
+ * The generation this tab last read or wrote, or null before it has seen the
+ * stored session at all.
+ *
+ * Two tabs each hold their own pool, and the write below is a clear-then-put:
+ * whoever saved last deleted the other tab's photos outright. Every write now
+ * carries a counter, and a tab refuses to write when the stored counter is not
+ * the one it last saw. The pools cannot be merged, so refusing is the only
+ * honest option: destroying one silently is the worse answer, and the caller
+ * surfaces the refusal rather than retrying.
+ */
+let myGen = null;
+
+/** A save that was refused because another tab owns the session. */
+export const CONFLICT = 'conflict';
+
 export async function saveSession(state, { photos = true } = {}) {
   try {
     const row = (p, i) => ({
@@ -52,27 +68,43 @@ export async function saveSession(state, { photos = true } = {}) {
       cutBlob: p.cutBlob || null,
     });
     const sig = state.pool.map((p) => p.id).join(',');
-    if (photos && sig !== lastPhotoSig) {
-      await tx('photos', 'readwrite', (s) => {
-        s.clear();
-        state.pool.forEach((p, i) => s.put(row(p, i)));
-      });
-      lastPhotoSig = sig;
-    } else {
-      // Same photos, changed properties: update in place, no blob rewrite.
-      await tx('photos', 'readwrite', (s) => {
-        state.pool.forEach((p, i) => s.put(row(p, i)));
-      });
+    const rewritePhotos = photos && sig !== lastPhotoSig;
+    const d = await open();
+    let nextGen = null;
+    // One transaction over both stores: the generation is read and written
+    // inside it, so two tabs cannot interleave a check with the other's write.
+    const outcome = await new Promise((res, rej) => {
+      const t = d.transaction(['photos', 'meta'], 'readwrite');
+      const ps = t.objectStore('photos'), ms = t.objectStore('meta');
+      let refused = false;
+      const read = ms.get('session');
+      read.onsuccess = () => {
+        const stored = read.result;
+        const storedGen = stored?.gen ?? 0;
+        // A tab that has never seen this session may claim it; one that has
+        // must still be holding the current generation.
+        if (myGen !== null && storedGen !== myGen) { refused = true; t.abort(); return; }
+        if (rewritePhotos) ps.clear();
+        state.pool.forEach((p, i) => ps.put(row(p, i)));
+        nextGen = storedGen + 1;
+        ms.put({
+          overrides: [...state.overrides], layout: state.layout,
+          params: { ...state.params }, background: state.background,
+          bg2: state.bg2, bgAngle: state.bgAngle, borderColor: state.borderColor,
+          nextId: state.nextId,
+          overlays: state.overlays.map((o) => ({ ...o })),
+          schema: 3, gen: nextGen,
+        }, 'session');
+      };
+      t.oncomplete = () => res(true);
+      t.onabort = () => res(refused ? CONFLICT : false);
+      t.onerror = () => rej(t.error);
+    });
+    if (outcome === true) {
+      myGen = nextGen;
+      if (rewritePhotos) lastPhotoSig = sig;
     }
-    await tx('meta', 'readwrite', (s) => s.put({
-      overrides: [...state.overrides], layout: state.layout,
-      params: { ...state.params }, background: state.background,
-      bg2: state.bg2, bgAngle: state.bgAngle, borderColor: state.borderColor,
-      nextId: state.nextId,
-      overlays: state.overlays.map((o) => ({ ...o })),
-      schema: 3,
-    }, 'session'));
-    return true;
+    return outcome;
   } catch {
     // Private browsing and a full quota both land here. Losing persistence is
     // not worth losing the session over, so this reports and moves on.
@@ -86,16 +118,21 @@ export async function loadSession() {
     const meta = await tx('meta', 'readonly', (s) => s.get('session'));
     if (!rows?.length) return null;
     rows.sort((a, b) => a.i - b.i);
+    // Adopt the generation we just read: this tab is now in sync, and its next
+    // save is legitimate until some other tab moves the counter.
+    myGen = meta?.gen ?? 0;
     return { rows, meta: meta || null };
   } catch { return null; }
 }
 
-export function resetSaveCache() { lastPhotoSig = ''; }
+export function resetSaveCache() { lastPhotoSig = ''; myGen = null; }
 
 export async function clearSession() {
   try {
     await tx('photos', 'readwrite', (s) => s.clear());
     await tx('meta', 'readwrite', (s) => s.delete('session'));
     lastPhotoSig = '';
+    // The session is gone, so the next save starts a fresh generation.
+    myGen = null;
   } catch { /* nothing to clear */ }
 }

@@ -10,7 +10,8 @@ import * as H from './history.js';
 import { applyFx, fxKey, isIdentity } from './filters.js';
 import { makeText, PRESETS, FONTS } from './overlays.js';
 import { wireStage } from './gestures.js';
-import { saveSession, loadSession, clearSession } from './store.js';
+import { loadSession, clearSession } from './store.js';
+import { scheduleSave, resumeSaving } from './autosave.js';
 import { showToast as toast, echoRanges } from './utils.js';
 import { openEditor, isEditorOpen, wireEditor } from './editor.js';
 import { STYLES, applyStyle, styleSwatch, toggleMono } from './presets.js';
@@ -64,7 +65,7 @@ function cellAt(ev) {
 }
 
 let lastFrame = { cells: [], placement: [], W: 1, H: 1, ar: 1 };
-let saveTimer = null, fxTimer = null;
+let fxTimer = null;
 
 /**
  * Bake colour into a photo's pixels, because ctx.filter is not Baseline.
@@ -90,11 +91,6 @@ function scheduleFx(photo, delay = 180) {
     drawStrip();
     repaintStage();
   }, delay);
-}
-
-function scheduleSave() {
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => saveSession(state), 700);
 }
 
 function repaint() {
@@ -267,6 +263,7 @@ export function wire() {
     edit(() => { state.pool.length = 0; state.overrides.clear(); state.selected = null;
                  state.overlays = []; state.selectedOverlay = null; });
     clearSession();
+    resumeSaving();
   });
 
   // ── undo / redo / shuffle / batch thumbnails ──────────────────────────────
