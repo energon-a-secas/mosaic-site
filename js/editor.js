@@ -17,6 +17,8 @@ import * as H from './history.js';
 import { applyFx, fxKey, isIdentity, PRESET_NAMES } from './filters.js';
 import { removeBackground, tintThumb } from './tools.js';
 import { showToast as toast, echoRanges } from './utils.js';
+import { syncCrop, cropDown, cropMove, cropUp, nudgeCrop, resetCrop, cancelCropDrag }
+  from './editor-crop.js';
 import { makeCanvas, makeStamp, wandErase, readAlphaInto, readAlphaRect,
          cropAlpha, writeAlphaRect, bakeCut, fullyOpaque } from './editor-tools.js';
 import { wireInput } from './editor-input.js';
@@ -120,6 +122,10 @@ async function applyEditor() {
     }
     p.tf.filter = mine.tf.filter;
     p.tf.adj = { ...mine.tf.adj };
+    // Framing too, or the crop the user just drew is thrown away on Done.
+    p.tf.cx = mine.tf.cx; p.tf.cy = mine.tf.cy;
+    p.tf.cw = mine.tf.cw; p.tf.ch = mine.tf.ch;
+    p.tf.rot = mine.tf.rot;
     p.fx = null; p.fxKey = null;
     p.thumb = await tintThumb(p);
   } finally {
@@ -170,6 +176,7 @@ function applyView() {
   $('#edCanvas').style.transform = `translate(${x}px, ${y}px) scale(${s})`;
   $('[data-ed-zoom]').textContent = `${Math.round(s * 100)}%`;
   sizeCursor();
+  syncCrop(ed);
 }
 
 function zoomAt(cx, cy, k) {
@@ -397,6 +404,8 @@ function syncEditor() {
     b.classList.toggle('is-on', on);
     b.setAttribute('aria-pressed', String(on));
   });
+  syncCrop(ed);
+  cancelCropDrag();
   $('[data-ed="undo"]').disabled = !ed.past.length;
   $('[data-ed="redo"]').disabled = !ed.future.length;
   $('#edBrush').value = String(ed.brush);
@@ -414,6 +423,16 @@ function syncEditor() {
 }
 
 // ── wiring (once) ────────────────────────────────────────────────────────────
+
+/**
+ * Framing changes fxKey does NOT see. fxKey covers filter and adj only, by
+ * design, because it is a colour-bake cache key and crop is geometry. Without
+ * this the editor reads a crop-only edit as clean and one Escape discards it.
+ */
+const framingChanged = (a, b) =>
+  (a.cx ?? 0) !== (b.cx ?? 0) || (a.cy ?? 0) !== (b.cy ?? 0) ||
+  (a.cw ?? 1) !== (b.cw ?? 1) || (a.ch ?? 1) !== (b.ch ?? 1) ||
+  (a.rot ?? 0) !== (b.rot ?? 0);
 
 export function wireEditor(depsIn) {
   deps = depsIn;
@@ -445,6 +464,7 @@ export function wireEditor(depsIn) {
     else if (act === 'auto') autoCut(e.target.closest('[data-ed]'));
     else if (act === 'resetmask') resetMask();
     else if (act === 'noadjust') { ed.tf.filter = 'none'; ed.tf.adj = { bright: 100, contrast: 100, sat: 100, temp: 0 }; syncEditor(); scheduleColor(0); }
+    else if (act === 'uncrop') { resetCrop(ed); deps.onPreview?.(); }
     else if (act === 'savepng') downloadEdited('image/png');
     else if (act === 'savejpg') downloadEdited('image/jpeg');
   });
@@ -464,5 +484,6 @@ export function wireEditor(depsIn) {
     getEd: () => ed, viewport, toImage, zoomAt, fitView, applyView,
     strokeStart, strokeMove, strokeEnd, cancelStroke, wandAt,
     undoEd, redoEd, closeEditor, syncEditor, sizeCursor, toast, fxKey,
+    cropDown, cropMove, cropUp, nudgeCrop, framingChanged,
   });
 }

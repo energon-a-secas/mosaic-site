@@ -7,6 +7,8 @@
 // binary and a build step; this fleet is zero-build, so that is a fleet-level
 // decision rather than something to smuggle in here. See docs/delivery/PLAN.md.
 
+import { cropRect } from './frame.js';
+
 function toCanvas(img) {
   const cv = document.createElement('canvas');
   cv.width = img.width; cv.height = img.height;
@@ -80,20 +82,25 @@ export async function removeBackground(img, tolerance = 32) {
  */
 export async function tintThumb(photo) {
   const { applyFx, isIdentity } = await import('./filters.js');
-  const t = await makeThumb(photo.cut || photo.bitmap);
+  const t = await makeThumb(photo.cut || photo.bitmap, 200, photo.tf);
   if (isIdentity(photo.tf)) return t;
   return (await applyFx(t, photo.tf)) || t;
 }
 
 /** Downscale for the strip, so a 12MP import does not repaint at full size. */
-export async function makeThumb(img, max = 200) {
-  const s = Math.min(1, max / Math.max(img.width, img.height));
+export async function makeThumb(img, max = 200, tf = null) {
+  // The strip is a fourth render path: js/render.js drawStrip draws this thumb
+  // directly and never goes through compose, so the crop has to be baked here
+  // or the strip tile and the collage cell disagree about the same photo.
+  const { sx, sy, sw, sh } = tf ? cropRect(tf, img.width, img.height)
+                                : { sx: 0, sy: 0, sw: img.width, sh: img.height };
+  const s = Math.min(1, max / Math.max(sw, sh));
   const cv = document.createElement('canvas');
-  cv.width = Math.max(1, Math.round(img.width * s));
-  cv.height = Math.max(1, Math.round(img.height * s));
+  cv.width = Math.max(1, Math.round(sw * s));
+  cv.height = Math.max(1, Math.round(sh * s));
   // Hinted: a tinted thumb is read back more than once, and the canvas is tiny.
   cv.getContext('2d', { willReadFrequently: true })
-    .drawImage(img, 0, 0, cv.width, cv.height);
+    .drawImage(img, sx, sy, sw, sh, 0, 0, cv.width, cv.height);
   return createImageBitmap(cv);
 }
 

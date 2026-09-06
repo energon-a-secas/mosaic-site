@@ -42,7 +42,7 @@ async function ingest(files) {
     try {
       const bmp = await createImageBitmap(f);
       const p = addPhoto({ bitmap: bmp, name: f.name, blob: f });
-      p.thumb = await makeThumb(bmp);
+      p.thumb = await makeThumb(bmp, 200, p.tf);
       if (!isIdentity(p.tf)) { p.fx = await applyFx(bmp, p.tf); p.fxKey = fxKey(p.tf); }
     } catch {
       toast(`Could not read ${f.name}`);
@@ -82,7 +82,7 @@ function scheduleFx(photo, delay = 180) {
     if (photo.fxKey === key) return;
     if (isIdentity(photo.tf)) {
       photo.fx = null; photo.fxKey = key;
-      photo.thumb = await makeThumb(photo.cut || photo.bitmap);
+      photo.thumb = await makeThumb(photo.cut || photo.bitmap, 200, photo.tf);
       drawStrip(); repaintStage(); return;
     }
     photo.fx = await applyFx(photo.cut || photo.bitmap, photo.tf);

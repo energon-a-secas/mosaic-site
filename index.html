@@ -328,7 +328,7 @@
           <label class="lab" for="oy">Nudge down <b data-echo="oy"></b></label>
           <input id="oy" type="range" min="-1" max="1" step="0.01" data-tf="oy">
           <label class="lab" for="rot">Rotate <b data-echo="rot"></b></label>
-          <input id="rot" type="range" min="-180" max="180" step="1" data-tf="rot">
+          <input id="rot" type="range" min="-180" max="180" step="0.5" data-tf="rot">
 
           <div class="chips">
             <button type="button" class="chip" data-flip="h">flip H</button>
@@ -392,6 +392,10 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 19 9.5-9.5"/><path d="M17.5 3.5v3M16 5h3"/><path d="M20 10v2M19 11h2"/><path d="M11.5 3.5v2M10.5 4.5h2"/></svg>
             <span>wand</span>
           </button>
+          <button type="button" data-ed-tool="crop" title="Crop and straighten (C)" aria-label="Crop">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/></svg>
+            <span>crop</span>
+          </button>
           <button type="button" data-ed-tool="pan" title="Move around (V, or hold space)" aria-label="Pan">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v16M4 12h16"/><path d="m9 7 3-3 3 3M9 17l3 3 3-3M7 9l-3 3 3 3M17 9l3 3-3 3"/></svg>
             <span>move</span>
@@ -402,6 +406,13 @@
           <div class="ed-cursor" id="edCursor" hidden aria-hidden="true"></div>
         </div>
         <aside class="ed-panel" aria-label="Editor settings">
+          <div class="grp">
+            <h2 class="grp-t">Crop</h2>
+            <p class="hint">Drag the frame to crop, or the arrow keys to nudge it. Hold Shift
+               while dragging a corner to keep its shape. Straighten lives beside the collage,
+               where it previews as you drag.</p>
+            <button type="button" class="btn btn--ghost" data-ed="uncrop">Reset crop</button>
+          </div>
           <div class="grp">
             <h2 class="grp-t">Cutout</h2>
             <label class="lab" for="edBrush">Brush size <b data-echo="edBrush"></b></label>

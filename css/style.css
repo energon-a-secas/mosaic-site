@@ -1000,3 +1000,42 @@ body.editor-open { overflow: hidden; }
     padding-bottom: calc(16px + env(safe-area-inset-bottom));
   }
 }
+
+/* ── Crop overlay ──────────────────────────────────────────────────────────
+   The scrim is one huge box-shadow rather than four positioned divs, so the
+   dimming and the frame edge cannot disagree about where the crop is. The
+   photo INSIDE the frame is never tinted: PRODUCT.md's argument is that this
+   tool asks you to judge photographs, so nothing may sit between the eye and
+   the pixels being kept. */
+.crop { position: absolute; inset: 0; pointer-events: none; }
+.crop-frame {
+  position: absolute; pointer-events: auto; cursor: move;
+  box-shadow: 0 0 0 9999px rgba(24, 26, 30, .55);
+  outline: 1px solid rgba(255, 255, 255, .95);
+}
+/* Rule of thirds from two gradients, so the guides cost no elements. */
+.crop-frame::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, .34) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, .34) 1px, transparent 1px);
+  background-size: 33.333% 100%, 100% 33.333%;
+  background-position: 33.333% 0, 0 33.333%;
+  background-repeat: repeat-x, repeat-y;
+}
+/* 24px hit target, 8px visual mark: WCAG 2.5.8 wants the target, the design
+   wants the mark, and they do not have to be the same rectangle. */
+.crop-h { position: absolute; width: 24px; height: 24px; pointer-events: auto; }
+.crop-h::after {
+  content: ''; position: absolute; inset: 8px; background: #fff; border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .45);
+}
+.crop-h[data-h="nw"] { left: -12px; top: -12px; cursor: nwse-resize; }
+.crop-h[data-h="ne"] { right: -12px; top: -12px; cursor: nesw-resize; }
+.crop-h[data-h="se"] { right: -12px; bottom: -12px; cursor: nwse-resize; }
+.crop-h[data-h="sw"] { left: -12px; bottom: -12px; cursor: nesw-resize; }
+.crop-h[data-h="n"]  { left: 50%; top: -12px; margin-left: -12px; cursor: ns-resize; }
+.crop-h[data-h="s"]  { left: 50%; bottom: -12px; margin-left: -12px; cursor: ns-resize; }
+.crop-h[data-h="w"]  { left: -12px; top: 50%; margin-top: -12px; cursor: ew-resize; }
+.crop-h[data-h="e"]  { right: -12px; top: 50%; margin-top: -12px; cursor: ew-resize; }
+.ed-viewport[data-tool="crop"] { cursor: default; }

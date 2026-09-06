@@ -25,6 +25,13 @@ export const state = {
 
 export const freshTf = () => ({
   zoom: 1, ox: 0, oy: 0, rot: 0, flipH: false, flipV: false, filter: 'none',
+  // The crop, as fractions of the source. Four FLAT fields, not a nested
+  // object: every serializer copies tf with a shallow spread and hand-copies
+  // only `adj`, so a nested crop would be shared by reference into each undo
+  // snapshot and a drag would rewrite history in place. Fractions, not pixels,
+  // because the bitmap composed from is one of three with different sizes
+  // (bitmap is native, cut is capped at MAX_DIM, fx inherits whichever).
+  cx: 0, cy: 0, cw: 1, ch: 1,
   adj: { bright: 100, contrast: 100, sat: 100, temp: 0 },
 });
 

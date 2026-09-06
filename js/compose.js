@@ -1,4 +1,5 @@
 import { PRESET_NAMES } from './filters.js';
+import { cropRect, coverZoom } from './frame.js';
 import { drawOverlay } from './overlays.js';
 export { PRESET_NAMES as FILTER_NAMES };
 
@@ -54,11 +55,17 @@ function drawPhoto(ctx, photo, r, radius, mask) {
   ctx.rotate((tf.rot * Math.PI) / 180);
   ctx.scale(tf.flipH ? -1 : 1, tf.flipV ? -1 : 1);
 
-  // Cover the cell, then apply the photo's own zoom and offset on top.
-  const base = Math.max(r.w / img.width, r.h / img.height);
-  const s = base * tf.zoom;
-  const dw = img.width * s, dh = img.height * s;
-  ctx.drawImage(img, -dw / 2 + tf.ox * r.w, -dh / 2 + tf.oy * r.h, dw, dh);
+  // Cover the cell with the CROPPED source, then apply zoom and offset on top.
+  const { sx, sy, sw, sh } = cropRect(tf, img.width, img.height);
+  const base = Math.max(r.w / sw, r.h / sh);
+  // Straighten leaves empty corners that cover-fit cannot hide: at zoom 1 the
+  // drawn rect is tight in one axis by construction and rotation needs more in
+  // that same axis. coverZoom is exactly 1 at rot 0, so an unrotated photo is
+  // untouched and no saved session re-frames itself.
+  const z = Math.max(tf.zoom, coverZoom(sw * base, sh * base, r.w, r.h, tf.rot));
+  const s = base * z;
+  const dw = sw * s, dh = sh * s;
+  ctx.drawImage(img, sx, sy, sw, sh, -dw / 2 + tf.ox * r.w, -dh / 2 + tf.oy * r.h, dw, dh);
   ctx.restore();
 }
 
