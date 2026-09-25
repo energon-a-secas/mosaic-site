@@ -36,5 +36,5 @@ export function showToast(msg) {
   el.textContent = msg;
   el.classList.add('visible');
   clearTimeout(_toastTimer);
-  _toastTimer = setTimeout(() => el.classList.remove('visible'), 2000);
+  _toastTimer = setTimeout(() => el.classList.remove('visible'), msg.length > 90 ? 8000 : 4000);
 }

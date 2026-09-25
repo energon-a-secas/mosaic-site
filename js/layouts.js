@@ -21,7 +21,7 @@ const vy = (v, ar) => v * ar;
 // row-major occupancy map and drops each item in the first slot that fits; a 2x2
 // that cannot fit the remaining width degrades to 1x1 rather than overflowing.
 function grid(n, { cols, gap, pad, ar }, spans = []) {
-  const C = Math.max(1, cols);
+  const C = Math.max(1, Math.min(n, cols));
   const occ = [];
   const free = (r, c, w, h) => {
     if (c + w > C) return false;
@@ -54,6 +54,9 @@ function grid(n, { cols, gap, pad, ar }, spans = []) {
   }
 
   const rows = Math.max(1, ...placed.map((p) => p.r + p.h));
+  // Wide banners and large photo sets still need room for photos when a
+  // spacing slider is at its maximum. Keep gutters equal in physical pixels.
+  gap = Math.min(gap, (1 - 2 * pad) / (C * 2), (1 - 2 * vy(pad, ar)) / (rows * ar * 2));
   const gy = vy(gap, ar), py = vy(pad, ar);
   const cw = (1 - 2 * pad + gap) / C;
   const ch = (1 - 2 * py + gy) / rows;
@@ -65,7 +68,8 @@ function grid(n, { cols, gap, pad, ar }, spans = []) {
 // Column-balanced: each photo goes to the currently shortest column, so a mixed
 // set of portraits and landscapes does not leave one column stranded.
 function masonry(n, { cols, gap, pad, ar }) {
-  const c = Math.max(1, cols);
+  const c = Math.max(1, Math.min(n, cols));
+  gap = Math.min(gap, (1 - 2 * pad) / (c * 2));
   const colW = (1 - 2 * pad + gap) / c - gap;
   const heights = new Array(c).fill(0);
   const placed = [];
@@ -111,6 +115,7 @@ function scatter(n, { pad, ar }) {
 }
 
 function strip(n, { gap, pad, ar }) {
+  gap = Math.min(gap, (1 - 2 * pad) / (n * 2));
   const w = (1 - 2 * pad + gap) / Math.max(n, 1) - gap;
   const py = vy(pad, ar);
   return Array.from({ length: n }, (_, i) =>
@@ -174,7 +179,7 @@ function onCurve(n, fn, { pad, ar }) {
   // shipped discs that overlapped at twelve photos.
   const S = 1 - 2 * pad;
   const fit = (gap * S) / (1 + gap);
-  const size = Math.max(0.05, Math.min(0.30, fit * 0.97));
+  const size = Math.min((1 - 2 * vy(pad, ar)) / ar, Math.max(0.05, Math.min(0.30, fit * 0.97)));
   // Square in PIXELS, not in normalised space, so the disc is a circle and the
   // compositor's min() no longer throws away one axis.
   const h = vy(size, ar), py = vy(pad, ar), Sy = 1 - 2 * py;
@@ -232,7 +237,8 @@ const FNS = { grid, masonry, scatter, strip, heart, circle, diamond, star, spira
 export function computeCells(n, layout, params, spans = [], ar = 1) {
   const fn = FNS[layout] || grid;
   const p = {
-    cols: params.cols, gap: params.gap / 400, pad: params.pad / 400,
+    cols: params.cols, gap: params.gap / 400,
+    pad: Math.min(params.pad / 400, 0.45 / Math.max(1, ar)),
     ar,   // canvas width / height, contract 1b
   };
   return fn(Math.max(n, 1), p, spans);

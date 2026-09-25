@@ -1,154 +1,121 @@
-// Stage gestures. Contract 4a decides who owns the bare drag:
-//
-//   overlay drag  >  wheel/pinch zoom  >  shift+drag swap  >  drag to pan
-//
-// Panning wins the free gesture because framing a photo happens many times per
-// collage and swapping two cells happens a handful of times. A mode toggle was
-// rejected: a mode you can forget you are in is worse than a modifier you hold.
-
-import { state, swapCells, selectedOverlayObj } from './state.js';
+// Canvas gestures share a history entry only when pixels actually move.
+// A tap selects; drag reframes; two fingers zoom; Shift-drag swaps cells.
+import { state, swapCells } from './state.js';
 import { overlayAt } from './overlays.js';
 import * as H from './history.js';
 import { refs } from './render.js';
 
-let cellDrag = null;   // shift + drag, cell to cell
-let ovlDrag = null;    // caption being moved
-let panDrag = null;    // photo being reframed inside its cell
-let pinch = null;      // two-finger zoom
+let cellDrag = null, ovlDrag = null, panDrag = null, pinch = null;
 let wheelSettle = null;
 const pointers = new Map();
 
-/** Clamp so a photo can never be dragged fully out of its own cell. */
-function clampPan(p) {
-  const lim = 0.5 + p.tf.zoom * 0.5;
-  p.tf.ox = Math.max(-lim, Math.min(lim, p.tf.ox));
-  p.tf.oy = Math.max(-lim, Math.min(lim, p.tf.oy));
+function clampPan(photo) {
+  const limit = 0.5 + photo.tf.zoom * 0.5;
+  photo.tf.ox = Math.max(-limit, Math.min(limit, photo.tf.ox));
+  photo.tf.oy = Math.max(-limit, Math.min(limit, photo.tf.oy));
 }
 
-export function wireStage({ repaint, repaintStage, edit, lastFrameRef, cellAt, scheduleFxIfNeeded }) {
-  const canvas = refs.canvas;
-  const lf = lastFrameRef;
-  canvas.addEventListener('pointerdown', (e) => {
-    const r = canvas.getBoundingClientRect();
-    const fx = (e.clientX - r.left) / r.width, fy = (e.clientY - r.top) / r.height;
-    const o = overlayAt(state.overlays, fx, fy);
-    if (o) {
-      // Front-to-back: a pointer on an overlay never reaches the cell beneath.
-      H.mark(state);
-      ovlDrag = { o, dx: fx - o.x, dy: fy - o.y };
-      state.selectedOverlay = o.id; state.selected = null;
-      canvas.setPointerCapture?.(e.pointerId);
-      repaint();
+function markGesture(gesture) {
+  if (!gesture.marked) { H.mark(state); gesture.marked = true; }
+}
+
+export function wireStage({ repaint, repaintStage, edit, lastFrameRef, cellAt }) {
+  const canvas = refs.canvas, frame = lastFrameRef;
+  canvas.addEventListener('pointerdown', (event) => {
+    if (event.button > 0) return;
+    pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    canvas.setPointerCapture?.(event.pointerId);
+    if (pointers.size > 1) {
+      if (pointers.size === 2 && panDrag) {
+        const [a, b] = [...pointers.values()];
+        pinch = { photo: panDrag.photo, zoom: panDrag.photo.tf.zoom,
+          d0: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)), marked: panDrag.marked };
+        panDrag = null;
+      }
       return;
+    }
+    const rect = canvas.getBoundingClientRect();
+    const x = (event.clientX - rect.left) / rect.width;
+    const y = (event.clientY - rect.top) / rect.height;
+    const overlay = overlayAt(state.overlays, x, y);
+    if (overlay) {
+      ovlDrag = { overlay, dx: x - overlay.x, dy: y - overlay.y,
+        sx: event.clientX, sy: event.clientY, marked: false };
+      state.selectedOverlay = overlay.id; state.selected = null;
+      repaint(); return;
     }
     state.selectedOverlay = null;
-    const i = cellAt(e);
-    if (i < 0) { repaint(); return; }
-    const p = lf().placement[i];
-    state.selected = p ? p.id : null;
-
-    if (e.shiftKey) {
-      // Swapping is rare, so it pays the modifier (contract 4a).
-      cellDrag = i;
-    } else if (p) {
-      const cell = lf().cells[i];
-      panDrag = {
-        photo: p, sx: e.clientX, sy: e.clientY,
-        ox: p.tf.ox, oy: p.tf.oy,
-        cw: cell.w * lf().W, ch: cell.h * lf().H,
-        rot: cell.rot || 0,
-      };
-      H.mark(state);
-      canvas.setPointerCapture?.(e.pointerId);
+    const index = cellAt(event);
+    const photo = index >= 0 ? frame().placement[index] : null;
+    state.selected = photo?.id || null;
+    if (event.shiftKey && photo) cellDrag = index;
+    else if (photo) {
+      const cell = frame().cells[index];
+      panDrag = { photo, sx: event.clientX, sy: event.clientY,
+        ox: photo.tf.ox, oy: photo.tf.oy,
+        cw: cell.w * rect.width, ch: cell.h * rect.height,
+        rot: cell.rot || 0, marked: false };
     }
-    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     repaint();
   });
-  canvas.addEventListener('pointermove', (e) => {
-    if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-
+  canvas.addEventListener('pointermove', (event) => {
+    if (!pointers.has(event.pointerId)) return;
+    pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
     if (pinch && pointers.size >= 2) {
       const [a, b] = [...pointers.values()];
-      const d = Math.hypot(a.x - b.x, a.y - b.y);
-      const ph = pinch.photo;
-      ph.tf.zoom = Math.max(1, Math.min(6, pinch.zoom * (d / pinch.d0)));
-      clampPan(ph);
-      scheduleFxIfNeeded(ph);
-      repaintStage();
-      return;
+      const distance = Math.hypot(a.x - b.x, a.y - b.y);
+      if (Math.abs(distance - pinch.d0) < 2 && !pinch.marked) return;
+      markGesture(pinch);
+      pinch.photo.tf.zoom = Math.max(1, Math.min(6, pinch.zoom * distance / pinch.d0));
+      clampPan(pinch.photo); repaintStage(); return;
     }
-
     if (panDrag) {
-      const p = panDrag.photo;
-      // ox/oy are fractions of the CELL, so a pixel delta divides by cell size.
-      // Flip inverts the axis, or the photo would run away from the pointer.
-      // A scatter cell is rotated, so the screen delta first rotates into the
-      // cell's own frame or a horizontal drag drifts diagonally.
-      let dx = e.clientX - panDrag.sx, dy = e.clientY - panDrag.sy;
+      let dx = event.clientX - panDrag.sx, dy = event.clientY - panDrag.sy;
+      if (Math.hypot(dx, dy) < 3 && !panDrag.marked) return;
+      markGesture(panDrag);
       if (panDrag.rot) {
-        const a = (-panDrag.rot * Math.PI) / 180, c = Math.cos(a), s = Math.sin(a);
-        const rx = dx * c - dy * s, ry = dx * s + dy * c;
-        dx = rx; dy = ry;
+        const angle = -panDrag.rot * Math.PI / 180;
+        const c = Math.cos(angle), s = Math.sin(angle);
+        [dx, dy] = [dx * c - dy * s, dx * s + dy * c];
       }
-      const fx = p.tf.flipH ? -1 : 1, fy = p.tf.flipV ? -1 : 1;
-      p.tf.ox = panDrag.ox + (dx / panDrag.cw) * fx;
-      p.tf.oy = panDrag.oy + (dy / panDrag.ch) * fy;
-      clampPan(p);
-      repaintStage();
-      return;
+      const photo = panDrag.photo;
+      photo.tf.ox = panDrag.ox + dx / panDrag.cw * (photo.tf.flipH ? -1 : 1);
+      photo.tf.oy = panDrag.oy + dy / panDrag.ch * (photo.tf.flipV ? -1 : 1);
+      clampPan(photo); repaintStage(); return;
     }
-
-    if (!ovlDrag) return;
-    const r = canvas.getBoundingClientRect();
-    ovlDrag.o.x = Math.max(-0.2, Math.min(1.2, (e.clientX - r.left) / r.width - ovlDrag.dx));
-    ovlDrag.o.y = Math.max(-0.2, Math.min(1.2, (e.clientY - r.top) / r.height - ovlDrag.dy));
-    repaintStage();
+    if (ovlDrag) {
+      if (Math.hypot(event.clientX - ovlDrag.sx, event.clientY - ovlDrag.sy) < 3 && !ovlDrag.marked) return;
+      markGesture(ovlDrag);
+      const rect = canvas.getBoundingClientRect();
+      ovlDrag.overlay.x = Math.max(-0.2, Math.min(1.2, (event.clientX - rect.left) / rect.width - ovlDrag.dx));
+      ovlDrag.overlay.y = Math.max(-0.2, Math.min(1.2, (event.clientY - rect.top) / rect.height - ovlDrag.dy));
+      repaintStage();
+    }
   });
-  const endPointer = (e) => {
-    pointers.delete(e.pointerId);
-    if (pointers.size < 2) pinch = null;
-  };
-  canvas.addEventListener('pointercancel', endPointer);
-  canvas.addEventListener('pointerup', (e) => {
-    endPointer(e);
-    if (ovlDrag) { ovlDrag = null; repaint(); return; }
-    // repaint() must always run here: it is what syncs the inspector, the
-    // undo buttons and the save debounce after a reframe. A stray call to a
-    // never-defined helper used to throw first and skip all three.
-    if (panDrag) { panDrag = null; repaint(); return; }
-    if (cellDrag === null) return;
-    const j = cellAt(e);
-    if (j >= 0 && j !== cellDrag) edit(() => swapCells(cellDrag, j, lf().placement));
-    cellDrag = null;
+  function finish(event) {
+    pointers.delete(event.pointerId);
+    if (cellDrag !== null && event.type === 'pointerup') {
+      const target = cellAt(event);
+      if (target >= 0 && target !== cellDrag) edit(() => swapCells(cellDrag, target, frame().placement));
+    }
+    cellDrag = null; panDrag = null; ovlDrag = null; pinch = null;
+    repaint();
+  }
+  canvas.addEventListener('pointerup', finish);
+  canvas.addEventListener('pointercancel', finish);
+  canvas.addEventListener('lostpointercapture', (event) => {
+    if (pointers.has(event.pointerId)) finish(event);
   });
-
-  // Wheel zooms the photo under the cursor. No modifier: nothing else on the
-  // stage wants the wheel, and requiring one for the second-most-common framing
-  // action would be gratuitous.
-  canvas.addEventListener('wheel', (e) => {
-    const i = cellAt(e);
-    if (i < 0) return;
-    const p = lf().placement[i];
-    if (!p) return;
-    e.preventDefault();
-    state.selected = p.id;
-    p.tf.zoom = Math.max(1, Math.min(6, p.tf.zoom * (e.deltaY < 0 ? 1.08 : 1 / 1.08)));
-    clampPan(p);
-    repaintStage();
+  canvas.addEventListener('wheel', (event) => {
+    const index = cellAt(event);
+    const photo = index >= 0 ? frame().placement[index] : null;
+    if (!photo) return;
+    event.preventDefault();
+    if (!wheelSettle) H.mark(state);
+    state.selected = photo.id; state.selectedOverlay = null;
+    photo.tf.zoom = Math.max(1, Math.min(6, photo.tf.zoom * (event.deltaY < 0 ? 1.08 : 1 / 1.08)));
+    clampPan(photo); repaintStage();
     clearTimeout(wheelSettle);
-    wheelSettle = setTimeout(() => { H.mark(state); repaint(); }, 260);
+    wheelSettle = setTimeout(() => { wheelSettle = null; repaint(); }, 260);
   }, { passive: false });
-
-  // Two fingers start a pinch on the cell they land on.
-  canvas.addEventListener('pointerdown', (e) => {
-    if (pointers.size !== 2 || pinch) return;
-    const i = cellAt(e);
-    const p = i >= 0 ? lf().placement[i] : null;
-    if (!p) return;
-    const [a, b] = [...pointers.values()];
-    panDrag = null;
-    pinch = { photo: p, d0: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)), zoom: p.tf.zoom };
-    H.mark(state);
-  });
-
 }

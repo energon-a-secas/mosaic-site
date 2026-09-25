@@ -16,9 +16,10 @@ Then open http://localhost:8867. It must be served over HTTP. The app is ES modu
 
 ```bash
 node tests/frame.test.mjs
+node tests/workspace.test.mjs
 ```
 
-The only automated coverage the rendering has. `js/frame.js` is deliberately
+The geometry and workspace checks need no dependencies. `js/frame.js` is deliberately
 DOM-free so the framing geometry can be tested without a browser, which matters
 because being subtly wrong there looks like a design choice rather than a bug:
 a cell that leaks background at 2 degrees, or a crop that quietly draws at half
@@ -64,8 +65,11 @@ IndexedDB (db `mosaic`): store `photos` holds `{id, i, name, blob, span, tf,
 cutBlob}` rows (the original file blob plus, when a cutout exists, the baked
 PNG of it), `tf` now carries the crop as four flat fractions (`cx, cy, cw, ch`), which ride
 the existing shallow spreads. Store `meta` holds the arrangement under key `session` (layout,
-params, background, bg2, bgAngle, borderColor, overrides, overlays, schema 3).
-Old schema-2 sessions load fine: every new field defaults. Undo history is
+params, background, bg2, bgAngle, borderColor, overrides, overlays, schema 4).
+If WebKit rejects a Blob/File write, the same transaction is retried using
+ArrayBuffer photo data plus `blobType`. Loading normalizes either format to
+Blobs. Generation conflicts are never retried. Old schema-2/3 sessions load
+fine: every new field defaults. Undo history is
 memory-only and resets on reload.
 
 ## Conventions

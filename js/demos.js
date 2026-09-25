@@ -15,6 +15,7 @@ const styleByName = (name) => STYLES.find((s) => s.name === name);
 
 // pick: indexes into SAMPLES; without it, the first `photos` samples load.
 const RECIPES = {
+  duo:       { photos: 2, pick: [0, 4], layout: 'grid', cols: 2, ratio: '16:9', style: 'clean' },
   postcards: { photos: 8, layout: 'scatter', ratio: '3:2', style: 'prints' },
   heart:     { photos: 8, layout: 'heart', ratio: '1:1', style: 'pastel' },
   meme: {
@@ -71,7 +72,7 @@ async function loadDemo(name, repaint) {
   applyStyle(state, styleByName(r.style));
   if (r.overlays) state.overlays = r.overlays();
   repaint();
-  toast('Demo loaded. Every control still applies: switch the layout, nothing is lost.');
+  toast('Sample photos added. Try a layout or add your own.');
 }
 
 let armed = null, armTimer = 0, loading = false;

@@ -46,6 +46,9 @@ uploaded anywhere.
 
 ## Features
 
+- **Made for mobile** -- a visible preview and five clear tool tabs, with photo selection and reordering that work by touch or keyboard
+- **A useful starting point** -- two side-by-side photos on a 16:9 canvas, plus visual presets for squares, portraits, stories, stacked photos and 19:6 banners. Saved projects keep their settings
+- **Straightforward downloads** -- PNG or JPEG, three sizes, and exact output dimensions before saving
 - **Change the layout whenever** -- ten layouts including grid, masonry, a scatter pile and shape outlines. Your photos and their framing carry over every time
 - **Focus editor** -- open any photo full screen: erase or restore the background with soft brushes, magic-wand the colour you click, or let the automatic edge fill do the flat part. Zoom to the pixel, undo per stroke, and it all persists
 - **Black & white and colour tools** -- mono and high-contrast noir presets plus brightness, contrast, saturation and warmth, baked into pixels so they work in every browser
@@ -56,7 +59,7 @@ uploaded anywhere.
 - **Reframe by dragging** -- drag a photo to pan it, scroll or pinch to zoom, hold shift and drag to swap two cells
 - **Meme and caption text** -- Impact styling with a proper outline, six box presets, drag anywhere on the canvas
 - **Batch thumbnails** -- every photo as its own square crop at 256 or 512px
-- **Undo and autosave** -- full history, and your session (cutouts included) survives a reload
+- **Undo and autosave** -- recover deleted photos while the page is open, undo a reframe in one step, and restore your session (cutouts included) after a reload
 - **Nothing leaves the device** -- no account, no upload, no watermark, no export limit, and background removal runs on local pixels, never a service
 
 ---
@@ -69,6 +72,25 @@ ES modules require an HTTP server (not `file://`):
 python3 -m http.server 8867
 ```
 
+Run the dependency-free geometry and workspace checks:
+
+```bash
+node tests/frame.test.mjs
+node tests/workspace.test.mjs
+```
+
+For browser regression checks, keep the server running and use Playwright for
+Python (`python3 -m pip install playwright`, then
+`python3 -m playwright install chromium webkit`):
+
+```bash
+python3 tests/browser-smoke.py
+```
+
+This checks Chromium and WebKit at phone, landscape, tablet, and desktop sizes,
+along with import, touch reordering, undo, captions, export, session restore,
+and offline startup. Screenshots and downloads are written to a temporary folder.
+
 ---
 
 ## Architecture
@@ -77,10 +99,14 @@ python3 -m http.server 8867
 
 ```
 mosaic-site/
-├── index.html          # shell: rails, stage, inspectors, mobile sheet tabs
+├── index.html          # toolbar, preview, tool panels, mobile navigation
 ├── css/style.css       # editor-light dialect tokens + app styles
 └── js/
     ├── app.js          # entry point
+    ├── workspace.js    # responsive panels, presets, selection controls
+    ├── templates.js    # non-destructive canvas presets
+    ├── import.js       # file input, drop, paste, decode progress and errors
+    ├── export.js       # PNG/JPEG settings, output dimensions, downloads
     ├── state.js        # the model: pool, overrides, overlays, params
     ├── layouts.js      # PURE layout functions: count -> cells, never sees a photo
     ├── compose.js      # the single render path, used by preview and every export

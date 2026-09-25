@@ -3,7 +3,7 @@
 // always safe, reversible with one undo, and composable with any layout.
 
 export const STYLES = [
-  { name: 'clean',   bg: '#ffffff', bg2: null, gap: 10, radius: 6,  pad: 28, border: 0,  borderColor: '#ffffff' },
+  { name: 'clean',   bg: '#faf9f8', bg2: null, gap: 8, radius: 4,  pad: 12, border: 0,  borderColor: '#ffffff' },
   { name: 'gallery', bg: '#101114', bg2: null, gap: 22, radius: 0,  pad: 44, border: 0,  borderColor: '#ffffff' },
   { name: 'prints',  bg: '#e9e4da', bg2: null, gap: 18, radius: 2,  pad: 34, border: 10, borderColor: '#ffffff' },
   { name: 'sunset',  bg: '#f59e0b', bg2: '#7c3aed', angle: 160, gap: 14, radius: 12, pad: 30, border: 0, borderColor: '#ffffff' },

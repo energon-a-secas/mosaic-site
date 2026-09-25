@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="icon" type="image/x-icon" href="/favicon.ico" sizes="16x16 32x32 48x48">
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
@@ -22,7 +22,7 @@
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="https://mosaic.neorgon.com/">
   <meta property="og:locale" content="en_US">
-  <meta name="theme-color" content="#040714">
+  <meta name="theme-color" content="#f5f4f4">
   <meta property="og:image" content="https://mosaic.neorgon.com/og-preview.jpg">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
@@ -69,7 +69,7 @@
         <img src="https://cdn.neorgon.org/v1.0.0/energon-classic-logo.png" class="header-logo-img" alt="">
         <div class="header-title-wrap">
         <h1>Mosaic</h1>
-        <div class="header-subtitle">Collages you can re-layout, photos you can edit</div>
+        <div class="header-subtitle">A little space for your favorite photos</div>
       
         </div>
       </a>
@@ -110,184 +110,72 @@
     </div>
   </header>
 
-  <!-- Auth panel (uncomment when using Pattern B or C, add auth event handlers to js/events.js) -->
-  <!--
-  <div class="auth-panel" id="authPanel">
-    <div class="auth-panel-inner">
-      <div id="authGate">
-        <div class="auth-tabs">
-          <button class="auth-tab active" data-tab="login">Log In</button>
-          <button class="auth-tab" data-tab="register">Register</button>
-        </div>
-        <div class="auth-form" id="authLoginForm">
-          <input type="text" id="authLoginUser" placeholder="Username" autocomplete="username" maxlength="20">
-          <input type="password" id="authLoginPass" placeholder="Password" autocomplete="current-password">
-          <button class="auth-submit" id="authLoginBtn">Log In</button>
-        </div>
-        <div class="auth-form" id="authRegisterForm" hidden>
-          <input type="text" id="authRegUser" placeholder="Choose a username" autocomplete="username" maxlength="20">
-          <input type="password" id="authRegPass" placeholder="Choose a password" autocomplete="new-password">
-          <button class="auth-submit" id="authRegBtn">Register</button>
-        </div>
-      </div>
-      <div id="authUser" hidden>
-        <span class="auth-username" id="authUsername"></span>
-        <button class="auth-logout" id="authLogout">Log out</button>
-      </div>
-    </div>
-  </div>
-  <div class="auth-divider"></div>
-  -->
-
-  <!-- Main content: replace with your app's HTML structure -->
-  <main id="main">
+  <main id="main" aria-busy="true" inert>
     <input type="file" id="file" accept="image/*" multiple hidden>
-
+    <div class="workspace-toolbar">
+      <div class="workspace-title"><h2>Your collage</h2><span class="privacy-note"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>Only on your device</span></div>
+      <div class="workspace-actions">
+        <div class="history-actions" role="group" aria-label="Edit history">
+          <button type="button" class="icon-button" data-act="undo" aria-label="Undo" title="Undo (Ctrl or ⌘ Z)" disabled><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 4-5 5 5 5M3 9h11a6 6 0 0 1 0 12"/></svg></button>
+          <button type="button" class="icon-button" data-act="redo" aria-label="Redo" title="Redo (Ctrl or ⌘ Shift Z)" disabled><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 4 5 5-5 5M21 9H10a6 6 0 0 0 0 12"/></svg></button>
+        </div>
+        <button type="button" class="btn btn--secondary" data-act="add"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Add photos</span></button>
+        <button type="button" class="btn btn--primary" data-panel-target="export" aria-controls="panel-export"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M4 16v5h16v-5"/></svg><span>Export</span></button>
+      </div>
+      <p id="saveNotice" class="save-notice" role="status" hidden></p>
+    </div>
     <section class="board" aria-label="Collage editor">
-
-      <aside class="rail" id="rail" aria-label="Layout controls">
-          <button type="button" class="sheet-close" data-sheet-close>Close</button>
-        <div class="grp">
-          <h2 class="grp-t">Layout</h2>
-          <div class="chips" role="group" aria-label="Layout style">
-            <button type="button" class="chip" data-layout="grid">grid</button>
-            <button type="button" class="chip" data-layout="masonry">masonry</button>
-            <button type="button" class="chip" data-layout="scatter">scatter</button>
-            <button type="button" class="chip" data-layout="strip">strip</button>
-            <button type="button" class="chip" data-layout="heart">heart</button>
-            <button type="button" class="chip" data-layout="circle">circle</button>
-            <button type="button" class="chip" data-layout="diamond">diamond</button>
-            <button type="button" class="chip" data-layout="star">star</button>
-            <button type="button" class="chip" data-layout="spiral">spiral</button>
-            <button type="button" class="chip" data-layout="wave">wave</button>
-          </div>
-          <p class="hint">Switch whenever you like. Your photos and their framing carry over.</p>
-          <div class="chips" style="margin-top:8px">
-            <button type="button" class="chip" data-act="shuffle" title="Shuffle (R)">shuffle</button>
-            <button type="button" class="chip" data-act="undo" title="Undo (Cmd Z)" disabled>undo</button>
-            <button type="button" class="chip" data-act="redo" title="Redo (Cmd Shift Z)" disabled>redo</button>
-          </div>
-        </div>
-
-        <div class="grp">
-          <h2 class="grp-t">Style</h2>
-          <div class="chips" data-styles></div>
-          <div class="chips" style="margin-top:8px">
-            <button type="button" class="chip" data-act="allbw">all black &amp; white</button>
-          </div>
-          <p class="hint">One click sets spacing, corners, border and background. Photos and layout stay yours.</p>
-        </div>
-
-        <div class="grp" data-cols-row>
-          <label class="lab" for="cols">Columns <b data-cols-out>3</b></label>
-          <input id="cols" type="range" min="1" max="8" step="1" data-param="cols">
-        </div>
-
-        <div class="grp">
-          <label class="lab" for="ratio">Canvas</label>
-          <select id="ratio" data-param="ratio">
-            <option value="1:1">Square 1:1</option>
-            <option value="4:5">Portrait 4:5</option>
-            <option value="9:16">Story 9:16</option>
-            <option value="3:2">Landscape 3:2</option>
-            <option value="16:9" selected>Wide 16:9</option>
-          </select>
-        </div>
-
-        <div class="grp">
-          <label class="lab" for="gap">Gap <b data-echo="gap"></b></label>
-          <input id="gap" type="range" min="0" max="48" step="1" data-param="gap">
-          <label class="lab" for="radius">Corner <b data-echo="radius"></b></label>
-          <input id="radius" type="range" min="0" max="48" step="1" data-param="radius">
-          <label class="lab" for="pad">Margin <b data-echo="pad"></b></label>
-          <input id="pad" type="range" min="0" max="80" step="1" data-param="pad">
-          <label class="lab" for="bg">Background</label>
-          <input id="bg" type="color" data-param="background">
-          <div class="chips" style="margin-top:8px">
-            <button type="button" class="chip" data-act="bgmode">gradient</button>
-          </div>
-          <div data-grad-row hidden>
-            <label class="lab" for="bg2">Second colour</label>
-            <input id="bg2" type="color" data-param="bg2">
-            <label class="lab" for="bgangle">Direction <b data-echo="bgangle"></b></label>
-            <input id="bgangle" type="range" min="0" max="360" step="5" data-param="bgangle">
-          </div>
-          <label class="lab" for="border">Photo border <b data-echo="border"></b></label>
-          <input id="border" type="range" min="0" max="30" step="1" data-param="border">
-          <label class="lab" for="bordercolor">Border colour</label>
-          <input id="bordercolor" type="color" data-param="borderColor">
-        </div>
-
-        <div class="grp">
-          <h2 class="grp-t">Text &amp; memes</h2>
-          <div class="chips" data-presets></div>
-          <div class="chips" style="margin-top:8px">
-            <button type="button" class="chip chip--go" data-act="addtext">add text</button>
-            <button type="button" class="chip" data-act="addbubble">bubble</button>
-          </div>
-          <p class="hint">Captions float over the whole canvas, so they survive every layout change.</p>
-        </div>
-
-        <div class="grp">
-          <h2 class="grp-t">Export</h2>
-          <div class="chips">
-            <button type="button" class="chip is-on" data-fmt="png">PNG</button>
-            <button type="button" class="chip" data-fmt="jpeg">JPEG</button>
-          </div>
-          <div class="chips" style="margin-top:8px">
-            <button type="button" class="chip" data-export="800">800px</button>
-            <button type="button" class="chip" data-export="1600">1600px</button>
-            <button type="button" class="chip" data-export="3000">3000px</button>
-          </div>
-          <p class="hint">Thumbnail, web, and print. Same render path as the preview.</p>
-
-          <label class="lab">Each photo as its own thumbnail</label>
-          <div class="chips">
-            <button type="button" class="chip" data-thumbs="256">256px</button>
-            <button type="button" class="chip" data-thumbs="512">512px</button>
-          </div>
-          <p class="hint">Square crops using each photo's own framing, saved one by one.</p>
-        </div>
-
-        <div class="grp">
-          <h2 class="grp-t">Demos</h2>
-          <div class="chips">
-            <button type="button" class="chip" data-demo="postcards">postcards</button>
-            <button type="button" class="chip" data-demo="heart">heart</button>
-            <button type="button" class="chip" data-demo="meme">meme</button>
-            <button type="button" class="chip" data-demo="gallery">wall</button>
-          </div>
-          <p class="hint">Sample photos drawn right here in your browser. With photos loaded, a demo asks for a confirming second click before replacing them.</p>
-        </div>
-      </aside>
-
-      <div class="stage-wrap">
-        <div class="stage-box">
-          <canvas id="stage" aria-label="Collage preview"></canvas>
-          <div id="empty" class="empty">
-            <strong>Drop photos anywhere</strong>
-            <span>They never leave this device, and the layout stays changeable afterwards.</span>
-            <button type="button" id="emptyChoose" class="btn btn--primary">Choose photos</button>
-            <span class="empty-or">or try a demo, drawn right here in your browser</span>
-            <div class="chips empty-demos">
-              <button type="button" class="chip" data-demo="postcards">postcards</button>
-              <button type="button" class="chip" data-demo="heart">heart</button>
-              <button type="button" class="chip" data-demo="meme">meme</button>
-              <button type="button" class="chip" data-demo="gallery">wall</button>
+      <aside class="rail" id="rail" aria-label="Collage settings">
+        <nav class="desktop-tools" aria-label="Collage tools"><button type="button" data-panel-target="layout" aria-controls="panel-layout" aria-pressed="true"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16"/></svg><span>Layout</span></button><button type="button" data-panel-target="style" aria-controls="panel-style" aria-pressed="false"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18Z" fill="currentColor" stroke="none"/></svg><span>Style</span></button><button type="button" data-panel-target="photos" aria-controls="side" aria-pressed="false"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="1"/><path d="m3 16 5-5 4 4 3-3 6 6"/></svg><span>Photos</span></button><button type="button" data-panel-target="text" aria-controls="panel-text" aria-pressed="false"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6V4h16v2M12 4v16M8 20h8"/></svg><span>Text</span></button><button type="button" data-panel-target="export" aria-controls="panel-export" aria-pressed="false"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M4 16v5h16v-5"/></svg><span>Export</span></button></nav>
+        <section class="tool-section" id="panel-layout" data-tool-panel="layout" aria-labelledby="layout-heading">
+          <div class="panel-heading"><h2 id="layout-heading">Make it fit</h2><p>Pick a starting point. Change it anytime.</p></div>
+          <div class="template-grid" data-templates role="group" aria-label="Canvas presets"></div>
+          <div class="control-pair">
+            <div><label class="lab" for="ratio">Canvas shape</label>
+              <select id="ratio" data-param="ratio">
+                <option value="16:9">Landscape · 16:9</option><option value="19:6">Banner · 19:6</option>
+                <option value="1:1">Square · 1:1</option><option value="4:5">Portrait · 4:5</option>
+                <option value="9:16">Story · 9:16</option><option value="3:2">Classic · 3:2</option>
+              </select>
+            </div>
+            <div data-cols-row><label class="lab" for="cols">Columns <b data-cols-out>2</b></label>
+              <input id="cols" type="range" min="1" max="8" step="1" data-param="cols">
             </div>
           </div>
-        </div>
-      </div>
-
-      <aside class="side" id="side" aria-label="Photos and editing">
-          <button type="button" class="sheet-close" data-sheet-close>Close</button>
-        <div class="side-head">
-          <button type="button" class="btn btn--sm" data-act="add">Add photos</button>
-          <span class="count" id="count">no photos yet</span>
-          <button type="button" class="btn btn--ghost btn--sm" data-act="clear">Clear</button>
-        </div>
-        <ul id="strip" class="strip" aria-label="Photo pool"></ul>
-
+          <details class="disclosure"><summary>More layouts <span>10 styles</span></summary>
+            <div class="layout-grid" data-layout-options role="group" aria-label="Layout style"></div>
+          </details>
+          <button type="button" class="btn btn--secondary btn--block" data-act="shuffle">Shuffle photos</button>
+          <p class="hint">Your photos and edits stay with you in every layout.</p>
+        </section>
+        <section class="tool-section" id="panel-style" data-tool-panel="style" aria-labelledby="style-heading" hidden>
+          <div class="panel-heading"><h2 id="style-heading">Set the mood</h2><p>A finishing touch for your photos.</p></div>
+          <div class="style-grid" data-styles role="group" aria-label="Canvas styles"></div>
+          <label class="lab" for="gap">Space between photos <b data-echo="gap"></b></label>
+          <input id="gap" type="range" min="0" max="48" step="1" data-param="gap">
+          <label class="lab" for="pad">Outer margin <b data-echo="pad"></b></label>
+          <input id="pad" type="range" min="0" max="60" step="1" data-param="pad">
+          <label class="lab" for="radius">Rounded corners <b data-echo="radius"></b></label>
+          <input id="radius" type="range" min="0" max="48" step="1" data-param="radius">
+          <label class="lab" for="bg">Background colour</label><input id="bg" type="color" data-param="background">
+          <details class="disclosure"><summary>Gradient &amp; borders</summary>
+            <button type="button" class="chip" data-act="bgmode">Use a gradient</button>
+            <div data-grad-row hidden>
+              <label class="lab" for="bg2">Second colour</label><input id="bg2" type="color" data-param="bg2">
+              <label class="lab" for="bgangle">Direction <b data-echo="bgangle"></b></label>
+              <input id="bgangle" type="range" min="0" max="360" step="5" data-param="bgangle">
+            </div>
+            <label class="lab" for="border">Photo border <b data-echo="border"></b></label>
+            <input id="border" type="range" min="0" max="30" step="1" data-param="border">
+            <label class="lab" for="bordercolor">Border colour</label><input id="bordercolor" type="color" data-param="borderColor">
+          </details>
+          <button type="button" class="btn btn--secondary btn--block" data-act="allbw">All black &amp; white</button>
+        </section>
+        <section class="tool-section" id="panel-text" data-tool-panel="text" aria-labelledby="text-heading" hidden>
+          <div class="panel-heading"><h2 id="text-heading">Say a little more</h2><p>Add a caption, a label, or the punchline.</p></div>
+          <div class="chips"><button type="button" class="chip chip--primary" data-act="addtext">Add text</button><button type="button" class="chip" data-act="addbubble">Speech bubble</button></div>
+          <details class="disclosure"><summary>Caption templates</summary><div class="chips" data-presets></div></details>
+          <div class="caption-list" id="captionList" aria-label="Your captions"></div>
         <div id="textins" class="ins" hidden>
           <h2 class="grp-t">Caption</h2>
           <textarea id="otext" rows="2" data-o="text" aria-label="Caption text"></textarea>
@@ -314,15 +202,58 @@
           <p class="hint">Drag it on the canvas to move it.</p>
         </div>
 
+
+        </section>
+        <section class="tool-section" id="panel-export" data-tool-panel="export" aria-labelledby="export-heading" hidden>
+          <div class="panel-heading"><h2 id="export-heading">Ready to share</h2><p>Your collage, without a watermark.</p></div>
+          <fieldset class="export-options"><legend>File type</legend><div class="segmented">
+            <button type="button" class="chip is-on" data-fmt="png" aria-pressed="true">PNG <small>Best quality</small></button>
+            <button type="button" class="chip" data-fmt="jpeg" aria-pressed="false">JPEG <small>Smaller file</small></button>
+          </div></fieldset>
+          <label class="lab" for="exportSize">Image size</label>
+          <select id="exportSize"><option value="800">Small · 800 px wide</option><option value="1600" selected>Standard · 1600 px wide</option><option value="3000">Large · 3000 px wide</option></select>
+          <p class="export-dimensions" id="exportDimensions"></p>
+          <button type="button" class="btn btn--primary btn--block" id="downloadCollage" disabled><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M4 16v5h16v-5"/></svg><span>Download collage</span></button>
+          <p class="hint" id="exportHint">Add photos to download your collage.</p>
+          <details class="disclosure"><summary>Save photos separately</summary><p class="hint">Download each photo as a square thumbnail.</p><div class="chips"><button type="button" class="chip" data-thumbs="256">256 px</button><button type="button" class="chip" data-thumbs="512">512 px</button></div></details>
+        </section>
+      </aside>
+      <div class="stage-wrap">
+        <div class="stage-heading"><span>Preview</span><span class="canvas-badge" id="canvasBadge">16:9 · 2 columns</span></div>
+        <div class="stage-box">
+          <canvas id="stage" aria-label="Collage preview. Select a photo in the Photos panel to edit it."></canvas>
+          <div id="empty" class="mosaic-empty">
+            <div class="empty-frame" aria-hidden="true"><span><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="1"/><path d="m3 16 5-5 4 4 3-3 6 6"/></svg></span><span><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="1"/><path d="m3 16 5-5 4 4 3-3 6 6"/></svg></span></div>
+            <h2>Your photos. Better together.</h2>
+            <p>Start with two, or add a whole collection.</p>
+            <button type="button" id="emptyChoose" class="btn btn--primary"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Choose photos</button>
+            <button type="button" class="text-button" data-demo="duo">Try it with sample photos</button>
+          </div>
+        </div>
+        <div class="stage-bottom">
+          <p class="stage-hint" id="stageHint">Pick your photos. Find your layout. Make it yours.</p>
+          <div class="selection-actions" id="selectionActions" hidden>
+            <span id="selectionName"></span>
+            <button type="button" class="icon-button" data-photo-move="-1" aria-label="Move photo earlier"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg></button>
+            <button type="button" class="icon-button" data-photo-move="1" aria-label="Move photo later"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10 6 6 6-6 6"/></svg></button>
+            <button type="button" class="chip" data-act="editselected">Edit photo</button>
+          </div>
+        </div>
+      </div>
+      <aside class="side" id="side" aria-label="Photos and editing">
+        <div class="panel-heading"><div class="side-title"><h2>Your photos</h2><span class="count" id="count">0 photos</span></div><p>Tap a photo to select and adjust it.</p></div>
+        <button type="button" class="btn btn--secondary btn--block" data-act="add"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Add photos</button>
+        <p class="photos-empty" id="photosEmpty">A favorite moment, a before &amp; after, a weekend away. Add photos to get started.</p>
+        <ul id="strip" class="strip" aria-label="Your photos"></ul>
+        <div class="photo-order" id="photoOrder" hidden><span>Reorder selected photo</span><div class="chips"><button type="button" class="chip" data-photo-move="-1">Move earlier</button><button type="button" class="chip" data-photo-move="1">Move later</button></div></div>
         <div id="inspector" class="ins" hidden>
           <h2 class="grp-t" data-ins-name>Photo</h2>
           <div class="chips" style="margin:0 0 10px">
             <button type="button" class="chip chip--primary" data-act="editphoto">Open editor</button>
           </div>
-          <p class="hint" style="margin:0 0 10px">Full screen: erase the background by hand, magic wand, black &amp; white, save the photo on its own. Or double-click it on the canvas.</p>
-          <p class="hint" style="margin:0 0 10px">Drag a photo to reframe it, scroll to zoom. Hold shift and drag to swap two cells.</p>
+          <p class="hint" style="margin:0 0 10px">Drag to reframe. Pinch or use the zoom slider to get closer.</p>
           <label class="lab" for="zoom">Zoom <b data-echo="zoom"></b></label>
-          <input id="zoom" type="range" min="1" max="4" step="0.01" data-tf="zoom">
+          <input id="zoom" type="range" min="1" max="6" step="0.01" data-tf="zoom">
           <label class="lab" for="ox">Nudge across <b data-echo="ox"></b></label>
           <input id="ox" type="range" min="-1" max="1" step="0.01" data-tf="ox">
           <label class="lab" for="oy">Nudge down <b data-echo="oy"></b></label>
@@ -331,15 +262,16 @@
           <input id="rot" type="range" min="-180" max="180" step="0.5" data-tf="rot">
 
           <div class="chips">
-            <button type="button" class="chip" data-flip="h">flip H</button>
-            <button type="button" class="chip" data-flip="v">flip V</button>
-            <button type="button" class="chip" data-act="fit">fit square</button>
-            <button type="button" class="chip" data-act="reset">reset</button>
+            <button type="button" class="chip" data-flip="h">Flip horizontal</button>
+            <button type="button" class="chip" data-flip="v">Flip vertical</button>
+            <button type="button" class="chip" data-act="fit">Fit square</button>
+            <button type="button" class="chip" data-act="reset">Reset photo</button>
           </div>
           <div class="chips">
-            <button type="button" class="chip" data-act="hero" title="Make this a 2x2 block (H)">hero 2x2</button>
+            <button type="button" class="chip" data-act="hero" title="Make this a 2x2 block (H)">Make featured photo</button>
           </div>
 
+          <details class="disclosure"><summary>Colour adjustments</summary>
           <label class="lab" for="bright">Brightness <b data-echo="bright"></b></label>
           <input id="bright" type="range" min="40" max="180" step="1" data-adj="bright">
           <label class="lab" for="contrast">Contrast <b data-echo="contrast"></b></label>
@@ -351,14 +283,18 @@
 
           <label class="lab">Filter</label>
           <div class="chips" data-filters></div>
+          </details>
         </div>
+
+        <details class="disclosure photo-extras"><summary>More options</summary>
+          <button type="button" class="btn btn--secondary btn--block" data-act="clear">Remove all photos</button>
+          <p class="hint">You can undo this while the page is open.</p>
+          <h3 class="lab">Try a sample collage</h3><div class="chips"><button type="button" class="chip" data-demo="duo">Side by side</button><button type="button" class="chip" data-demo="postcards">Postcards</button><button type="button" class="chip" data-demo="heart">Heart</button><button type="button" class="chip" data-demo="meme">Meme</button><button type="button" class="chip" data-demo="gallery">Gallery</button></div>
+        </details>
       </aside>
     </section>
-
-    <nav class="sheet-tabs" aria-label="Editor panels">
-      <button type="button" data-sheet="rail" aria-expanded="false" aria-controls="rail">Layout</button>
-      <button type="button" data-sheet="side" aria-expanded="false" aria-controls="side">Photos</button>
-    </nav>
+    <nav class="mobile-tools" aria-label="Collage tools"><button type="button" data-panel-target="layout" aria-controls="panel-layout" aria-pressed="true"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16"/></svg><span>Layout</span></button><button type="button" data-panel-target="style" aria-controls="panel-style" aria-pressed="false"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18Z" fill="currentColor" stroke="none"/></svg><span>Style</span></button><button type="button" data-panel-target="photos" aria-controls="side" aria-pressed="false"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="1"/><path d="m3 16 5-5 4 4 3-3 6 6"/></svg><span>Photos</span></button><button type="button" data-panel-target="text" aria-controls="panel-text" aria-pressed="false"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6V4h16v2M12 4v16M8 20h8"/></svg><span>Text</span></button><button type="button" data-panel-target="export" aria-controls="panel-export" aria-pressed="false"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M4 16v5h16v-5"/></svg><span>Export</span></button></nav>
+    <div id="importStatus" class="import-status" role="status" aria-live="polite" hidden></div>
 
     <!-- Focus editor: full-screen, one photo. All pixel work is local canvas;
          nothing is uploaded anywhere. Wired by js/editor.js. -->
@@ -373,7 +309,8 @@
           <span class="ed-zoom" data-ed-zoom>100%</span>
           <button type="button" class="chip" data-ed="zoomin" aria-label="Zoom in">+</button>
           <button type="button" class="chip" data-ed="zoomfit">fit</button>
-          <span class="ed-sep" aria-hidden="true"></span>
+        </div>
+        <div class="ed-exit-actions">
           <button type="button" class="chip" data-ed="cancel">Cancel</button>
           <button type="button" class="chip chip--go" data-ed="done">Done</button>
         </div>
@@ -408,9 +345,8 @@
         <aside class="ed-panel" aria-label="Editor settings">
           <div class="grp">
             <h2 class="grp-t">Crop</h2>
-            <p class="hint">Drag the frame to crop, or the arrow keys to nudge it. Hold Shift
-               while dragging a corner to keep its shape. Straighten lives beside the collage,
-               where it previews as you drag.</p>
+            <p class="hint">Drag the corners to crop. Drag inside the frame to move it.
+               Use the arrow keys for small adjustments.</p>
             <button type="button" class="btn btn--ghost" data-ed="uncrop">Reset crop</button>
           </div>
           <div class="grp">
@@ -457,8 +393,7 @@
   </main>
 
   <footer class="neo-footer" data-footer-mode="minimal">
-    Your photos never leave this device. Everything here runs in the browser, and
-    your session is saved locally so a reload does not lose your work.
+    Made for your moments. No uploads, no accounts, no watermarks.
   </footer>
 
   <script type="module" src="js/app.js"></script>

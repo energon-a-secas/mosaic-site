@@ -1,10 +1,7 @@
 import { state, addPhoto, removePhoto, movePhoto, swapCells, selectedPhoto,
-         shufflePool, freshTf, addOverlay, removeOverlay, selectedOverlayObj,
-         byId } from './state.js';
-import { renderAll, drawStage, drawStrip, currentCells, currentPlacement, refs,
+         shufflePool, freshTf, addOverlay, removeOverlay, selectedOverlayObj } from './state.js';
+import { renderAll, drawStage, drawStrip, refs,
          syncHistory, syncControls } from './render.js';
-import { exportBlob } from './compose.js';
-import { aspect } from './layouts.js';
 import { makeThumb, tintThumb, batchThumbnails, fitAspect } from './tools.js';
 import * as H from './history.js';
 import { applyFx, fxKey, isIdentity } from './filters.js';
@@ -16,40 +13,14 @@ import { showToast as toast, echoRanges } from './utils.js';
 import { openEditor, isEditorOpen, wireEditor } from './editor.js';
 import { STYLES, applyStyle, styleSwatch, toggleMono } from './presets.js';
 import { wireDemos } from './demos.js';
+import { wireWorkspace } from './workspace.js';
+import { wireImport } from './import.js';
+import { wireExport, syncExport } from './export.js';
 
 let dragFrom = null;      // strip reorder
 
 
-const isHeic = (f) => /\.(heic|heif)$/i.test(f.name || '') ||
-  /image\/(heic|heif)/i.test(f.type || '');
-
-async function ingest(files) {
-  const all = [...files];
-  // Chrome and Firefox cannot decode HEIC, which is what an iPhone shoots by
-  // default. Without this the first real experience is twenty identical "could
-  // not read" toasts and an empty canvas, with no hint that the FORMAT is the
-  // problem or that the phone can be told to shoot JPEG instead.
-  const heic = all.filter(isHeic);
-  const list = all.filter((f) => !isHeic(f) && (f.type.startsWith('image/') || !f.type));
-  if (heic.length) {
-    toast(heic.length === all.length
-      ? `${heic.length} HEIC photo${heic.length > 1 ? 's' : ''} skipped. Safari opens these; elsewhere set iPhone Settings, Camera, Formats to Most Compatible, or export as JPEG.`
-      : `Skipped ${heic.length} HEIC file${heic.length > 1 ? 's' : ''} this browser cannot decode.`);
-  }
-  if (!list.length) return;
-  H.mark(state);
-  for (const f of list) {
-    try {
-      const bmp = await createImageBitmap(f);
-      const p = addPhoto({ bitmap: bmp, name: f.name, blob: f });
-      p.thumb = await makeThumb(bmp, 200, p.tf);
-      if (!isIdentity(p.tf)) { p.fx = await applyFx(bmp, p.tf); p.fxKey = fxKey(p.tf); }
-    } catch {
-      toast(`Could not read ${f.name}`);
-    }
-  }
-  repaint();
-}
+let sessionReady = Promise.resolve();
 
 /** Which cell is under a pointer event, or -1. */
 function cellAt(ev) {
@@ -65,19 +36,17 @@ function cellAt(ev) {
 }
 
 let lastFrame = { cells: [], placement: [], W: 1, H: 1, ar: 1 };
-let fxTimer = null;
+const fxTimers = new Map();
 
 /**
  * Bake colour into a photo's pixels, because ctx.filter is not Baseline.
  * Debounced: a slider drag fires per pixel of travel, and a full-resolution pass
  * is far too slow for that. The stage keeps showing the last good bake meanwhile.
  */
-/** Only re-bake colour if this photo actually has any. */
-function scheduleFxIfNeeded(photo) { if (!isIdentity(photo.tf)) scheduleFx(photo); }
-
 function scheduleFx(photo, delay = 180) {
-  clearTimeout(fxTimer);
-  fxTimer = setTimeout(async () => {
+  clearTimeout(fxTimers.get(photo.id));
+  fxTimers.set(photo.id, setTimeout(async () => {
+    fxTimers.delete(photo.id);
     const key = fxKey(photo.tf);
     if (photo.fxKey === key) return;
     if (isIdentity(photo.tf)) {
@@ -85,44 +54,51 @@ function scheduleFx(photo, delay = 180) {
       photo.thumb = await makeThumb(photo.cut || photo.bitmap, 200, photo.tf);
       drawStrip(); repaintStage(); return;
     }
-    photo.fx = await applyFx(photo.cut || photo.bitmap, photo.tf);
+    const source = photo.cut || photo.bitmap;
+    const fx = await applyFx(source, photo.tf);
+    if (!state.pool.includes(photo) || fxKey(photo.tf) !== key || (photo.cut || photo.bitmap) !== source) return;
+    photo.fx = fx;
     photo.fxKey = key;
     photo.thumb = await tintThumb(photo);
     drawStrip();
     repaintStage();
-  }, delay);
+  }, delay));
 }
 
 function repaint() {
   lastFrame = renderAll();
   syncHistory(H.canUndo(), H.canRedo());
   echoRanges();
+  syncExport();
+  syncMoveControls();
+  for (const photo of state.pool) {
+    if (photo.fxKey !== fxKey(photo.tf) && (photo.fx || !isIdentity(photo.tf))) scheduleFx(photo, 0);
+  }
   scheduleSave();
 }
-const repaintStage = () => { lastFrame = drawStage(); };
+const repaintStage = () => { lastFrame = drawStage(); echoRanges(); syncExport(); };
 /** Mark before a change so it can be undone, then apply it. */
 const edit = (fn) => { H.mark(state); fn(); repaint(); };
 
-export function wire() {
-  // ── import ────────────────────────────────────────────────────────────────
-  const file = document.querySelector('#file');
-  document.querySelector('[data-act="add"]').addEventListener('click', () => file.click());
-  document.querySelector('#emptyChoose').addEventListener('click', () => file.click());
-  file.addEventListener('change', () => { ingest(file.files); file.value = ''; });
-
-  const stop = (e) => { e.preventDefault(); e.stopPropagation(); };
-  ['dragenter', 'dragover'].forEach((t) => document.addEventListener(t, (e) => {
-    stop(e); document.body.classList.add('is-dropping');
-  }));
-  ['dragleave', 'drop'].forEach((t) => document.addEventListener(t, (e) => {
-    if (t === 'drop') stop(e);
-    if (e.relatedTarget) return;
-    document.body.classList.remove('is-dropping');
-  }));
-  document.addEventListener('drop', (e) => {
-    document.body.classList.remove('is-dropping');
-    if (e.dataTransfer?.files?.length) ingest(e.dataTransfer.files);
+function syncMoveControls() {
+  const index = lastFrame.placement.findIndex((p) => p?.id === state.selected);
+  document.querySelectorAll('[data-photo-move]').forEach((button) => {
+    const next = index + Number(button.dataset.photoMove);
+    button.disabled = index < 0 || next < 0 || next >= lastFrame.placement.length || !lastFrame.placement[next];
   });
+}
+
+function moveSelected(direction) {
+  const index = lastFrame.placement.findIndex((p) => p?.id === state.selected);
+  const next = index + direction;
+  if (index < 0 || next < 0 || next >= lastFrame.placement.length) return;
+  edit(() => swapCells(index, next, lastFrame.placement));
+}
+
+export function wire() {
+  wireWorkspace({ edit, repaint, editPhoto: openEditor, moveSelected });
+  wireImport({ repaint, ready: () => sessionReady });
+  wireExport({ previewWidth: () => lastFrame.W });
 
   // ── layout controls ───────────────────────────────────────────────────────
   // The whole point: any of these can change at any time and no photo is lost.
@@ -137,7 +113,7 @@ export function wire() {
     const arm = () => { armed = true; };
     el.addEventListener('pointerdown', arm);
     el.addEventListener('keydown', (ev) => { if (ev.key.startsWith('Arrow')) arm(); });
-    el.addEventListener('input', () => { if (armed) { H.mark(state); armed = false; } });
+    el.addEventListener('input', () => { if (armed || el.type !== 'range') { H.mark(state); armed = false; } });
     el.addEventListener('input', () => {
       const k = el.dataset.param;
       if (k === 'ratio') state.params.ratio = el.value;
@@ -159,27 +135,33 @@ export function wire() {
   refs.strip.addEventListener('click', (e) => {
     const del = e.target.closest('[data-del]');
     if (del) { edit(() => removePhoto(del.dataset.del)); return; }
-    const edp = e.target.closest('[data-edit]');
-    if (edp) { openEditor(byId(edp.dataset.edit)); return; }
     const li = e.target.closest('.thumb');
     if (!li) return;
-    state.selected = state.selected === li.dataset.id ? null : li.dataset.id;
+    state.selected = li.dataset.id;
+    state.selectedOverlay = null;
     repaint();
   });
   refs.strip.addEventListener('dragstart', (e) => {
     const li = e.target.closest('.thumb');
-    if (li) { dragFrom = Number(li.dataset.index); e.dataTransfer.effectAllowed = 'move'; }
+    if (li) { dragFrom = Number(li.dataset.index); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', li.dataset.id); }
   });
   refs.strip.addEventListener('dragover', (e) => e.preventDefault());
   refs.strip.addEventListener('drop', (e) => {
+    if (dragFrom === null) return;
     e.preventDefault(); e.stopPropagation();
     const li = e.target.closest('.thumb');
-    if (li && dragFrom !== null) edit(() => movePhoto(dragFrom, Number(li.dataset.index)));
+    if (li && dragFrom !== null) edit(() => {
+      state.pool = lastFrame.placement.filter(Boolean);
+      state.overrides.clear();
+      movePhoto(dragFrom, Number(li.dataset.index));
+    });
     dragFrom = null;
   });
 
+  refs.strip.addEventListener('dragend', () => { dragFrom = null; });
+
   wireStage({ repaint, repaintStage, edit, lastFrameRef: () => lastFrame,
-              cellAt, scheduleFxIfNeeded });
+              cellAt });
 
   // Double-clicking a photo on the canvas is the fast lane into the editor.
   refs.canvas.addEventListener('dblclick', (e) => {
@@ -195,6 +177,10 @@ export function wire() {
     const c = e.target.closest('[data-tf],[data-adj]');
     if (c) insArmed = c;
   });
+  ins.addEventListener('keydown', (e) => {
+    if (e.key.startsWith('Arrow') || ['Home', 'End', 'PageUp', 'PageDown'].includes(e.key)) insArmed = e.target;
+  });
+  ins.addEventListener('change', repaint);
   ins.addEventListener('input', (e) => {
     const p = selectedPhoto();
     if (!p) return;
@@ -223,39 +209,6 @@ export function wire() {
     } else if (act === 'fit') {
       edit(() => fitAspect(p, 1));
     }
-  });
-
-  // ── export ────────────────────────────────────────────────────────────────
-  let exportFmt = 'png';
-  document.querySelectorAll('[data-fmt]').forEach((b) => {
-    b.setAttribute('aria-pressed', String(b.classList.contains('is-on')));
-    b.addEventListener('click', () => {
-      exportFmt = b.dataset.fmt;
-      document.querySelectorAll('[data-fmt]').forEach((x) => {
-        x.classList.toggle('is-on', x === b);
-        x.setAttribute('aria-pressed', String(x === b));
-      });
-    });
-  });
-  document.querySelectorAll('[data-export]').forEach((b) => {
-    b.addEventListener('click', async () => {
-      if (!state.pool.length) { toast('Add a photo first'); return; }
-      const px = Number(b.dataset.export);
-      const cells = currentCells();
-      const type = exportFmt === 'jpeg' ? 'image/jpeg' : 'image/png';
-      const blob = await exportBlob(cells, currentPlacement(cells), {
-        background: state.background, bg2: state.bg2, bgAngle: state.bgAngle,
-        borderColor: state.borderColor,
-        params: state.params, overlays: state.overlays,
-        ar: aspect(state.params.ratio), previewW: lastFrame.W,
-      }, px, type);
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = `mosaic-${state.layout}-${px}px.${exportFmt === 'jpeg' ? 'jpg' : 'png'}`;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-      toast(`Exported at ${px}px wide`);
-    });
   });
 
   document.querySelector('[data-act="clear"]').addEventListener('click', () => {
@@ -293,7 +246,7 @@ export function wire() {
   const styleWrap = document.querySelector('[data-styles]');
   STYLES.forEach((s) => {
     const b = document.createElement('button');
-    b.type = 'button'; b.className = 'chip chip--style';
+    b.type = 'button'; b.className = 'chip chip--style'; b.dataset.style = s.name;
     const sw = document.createElement('span');
     sw.className = 'swatch';
     sw.style.background = styleSwatch(s);
@@ -340,9 +293,9 @@ export function wire() {
   // The focus editor owns the keyboard while it is open.
   addEventListener('keydown', (e) => {
     if (isEditorOpen()) return;
-    const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName);
+    const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable;
     const mod = e.metaKey || e.ctrlKey;
-    if (mod && e.key.toLowerCase() === 'z') {
+    if (mod && e.key.toLowerCase() === 'z' && !typing) {
       e.preventDefault();
       if (e.shiftKey ? H.redo(state) : H.undo(state)) repaint();
       return;
@@ -350,13 +303,14 @@ export function wire() {
     if (typing || mod) return;
     const p = selectedPhoto();
     if (e.key === 'Delete' || e.key === 'Backspace') {
-      if (p) { e.preventDefault(); edit(() => removePhoto(p.id)); }
+      if (state.selectedOverlay) { e.preventDefault(); edit(() => removeOverlay(state.selectedOverlay)); }
+      else if (p) { e.preventDefault(); edit(() => removePhoto(p.id)); }
     } else if (e.key.toLowerCase() === 'h' && p) {
       edit(() => { p.span = p.span === 2 ? 1 : 2; });
     } else if (e.key.toLowerCase() === 'r') {
       if (state.pool.length > 1) edit(shufflePool);
     } else if (e.key === 'Escape') {
-      state.selected = null; repaint();
+      state.selected = null; state.selectedOverlay = null; repaint();
     } else if (/^[1-8]$/.test(e.key)) {
       edit(() => { state.params.cols = Number(e.key); });
     }
@@ -380,24 +334,37 @@ export function wire() {
     fontWrap.appendChild(b);
   });
 
-  document.querySelector('[data-act="addtext"]').addEventListener('click', () =>
-    edit(() => addOverlay(makeText({ text: 'YOUR TEXT', y: 0.4 }))));
-  document.querySelector('[data-act="addbubble"]').addEventListener('click', () =>
-    edit(() => addOverlay(makeText({
+  document.querySelector('[data-act="addtext"]').addEventListener('click', () => {
+    edit(() => { state.selected = null; addOverlay(makeText({ text: 'Your text', y: 0.72, h: 0.16, font: 'sans', strokeRatio: 0.045, upper: false })); });
+    document.querySelector('#otext').focus();
+    document.querySelector('#otext').select();
+  });
+  document.querySelector('[data-act="addbubble"]').addEventListener('click', () => {
+    edit(() => { state.selected = null; addOverlay(makeText({
       type: 'bubble', text: 'say something', x: 0.1, y: 0.1, w: 0.5, h: 0.2,
       font: 'sans', color: '#111111', stroke: 'none', upper: false,
-    }))));
+    })); });
+    document.querySelector('#otext').focus();
+    document.querySelector('#otext').select();
+  });
 
   const tins = document.querySelector('#textins');
+  let textArmed = null;
   tins.addEventListener('input', (ev) => {
     const o = selectedOverlayObj(); const el = ev.target.closest('[data-o]');
     if (!o || !el) return;
+    if (textArmed === el) { H.mark(state); textArmed = null; }
     const k = el.dataset.o;
     o[k] = el.type === 'range' ? Number(el.value) : el.value;
     repaintStage();
+    scheduleSave();
   });
-  tins.addEventListener('pointerdown', (ev) => {
-    if (ev.target.closest('[data-o]')) H.mark(state);
+  tins.addEventListener('change', repaint);
+  const armText = (ev) => { if (ev.target.matches('[data-o]')) textArmed = ev.target; };
+  tins.addEventListener('focusin', armText);
+  tins.addEventListener('pointerdown', armText);
+  tins.addEventListener('keydown', (ev) => {
+    if (ev.target.type === 'range' && (ev.key.startsWith('Arrow') || ['Home', 'End'].includes(ev.key))) armText(ev);
   });
   tins.addEventListener('click', (ev) => {
     const o = selectedOverlayObj(); if (!o) return;
@@ -410,42 +377,13 @@ export function wire() {
     if (ev.target.closest('[data-act="delovl"]')) edit(() => removeOverlay(o.id));
   });
 
-  // Paste an image straight in: the dominant meme input path.
-  addEventListener('paste', (ev) => {
-    const items = [...(ev.clipboardData?.items || [])].filter((i) => i.type.startsWith('image/'));
-    if (!items.length) return;
-    ev.preventDefault();
-    ingest(items.map((i) => i.getAsFile()).filter(Boolean));
-  });
-
-  // ── mobile sheets ─────────────────────────────────────────────────────────
-  // One open at a time, and Escape closes. Opening a sheet does not repaint the
-  // stage, so the canvas keeps its last render behind the drawer.
-  const sheets = { rail: document.querySelector('#rail'), side: document.querySelector('#side') };
-  const tabs = [...document.querySelectorAll('[data-sheet]')];
-  function openSheet(name) {
-    for (const [k, el] of Object.entries(sheets)) {
-      const on = k === name;
-      el.toggleAttribute('data-open', on);
-      const tab = tabs.find((t) => t.dataset.sheet === k);
-      if (tab) tab.setAttribute('aria-expanded', String(on));
-    }
-  }
-  const closeSheets = () => openSheet(null);
-  tabs.forEach((t) => t.addEventListener('click', () => {
-    openSheet(t.getAttribute('aria-expanded') === 'true' ? null : t.dataset.sheet);
-  }));
-  document.querySelectorAll('[data-sheet-close]').forEach((b) =>
-    b.addEventListener('click', closeSheets));
-  addEventListener('keydown', (ev) => {
-    if (ev.key === 'Escape' && !isEditorOpen()) closeSheets();
-  });
-  // A layout choice on a phone should show its result, not stay buried.
-  document.querySelectorAll('[data-layout]').forEach((b) =>
-    b.addEventListener('click', () => { if (innerWidth <= 780) closeSheets(); }));
-
-  addEventListener('resize', repaintStage);
-  restoreSession();
+  new ResizeObserver(repaintStage).observe(refs.canvas.parentElement);
+  lastFrame = renderAll();
+  syncExport();
+  const main = document.querySelector('#main');
+  main.inert = true;
+  main.setAttribute('aria-busy', 'true');
+  sessionReady = restoreSession().finally(() => { main.inert = false; main.removeAttribute('aria-busy'); });
 }
 
 /** Re-open the last session. Failure here must never block an empty editor. */
@@ -482,7 +420,8 @@ async function restoreSession() {
       state.overlays = (m.overlays || []).map((o) => ({ ...o }));
     }
     toast(`Restored ${saved.rows.length} photo${saved.rows.length > 1 ? 's' : ''}`);
-  } catch {
+  } catch (error) {
+    console.warn('Mosaic could not restore the saved collage:', error);
     toast('Could not restore the last session');
   }
   H.reset();

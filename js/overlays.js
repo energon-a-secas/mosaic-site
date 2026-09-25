@@ -24,7 +24,8 @@ let seq = 1;
 
 export function makeText(partial = {}) {
   return {
-    id: `o${seq++}`, type: 'text',
+    // Session restore must not reuse o1 for a new caption already on the canvas.
+    id: `o${globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${seq++}`}`, type: 'text',
     x: 0.06, y: 0.04, w: 0.88, h: 0.20, rot: 0,
     text: 'TOP TEXT',
     font: 'impact', color: '#ffffff', stroke: '#000000',

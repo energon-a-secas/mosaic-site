@@ -20,12 +20,30 @@ export function scheduleSave(delay = 700) {
   if (lost) return;
   clearTimeout(timer);
   timer = setTimeout(async () => {
-    if ((await saveSession(state)) !== CONFLICT) return;
+    const result = await saveSession(state);
+    const notice = document.querySelector('#saveNotice');
+    if (result === true) { if (notice) notice.hidden = true; return; }
+    if (result === false) {
+      if (notice && state.pool.length) {
+        notice.textContent = 'Autosave is unavailable. Download your collage before closing this tab.';
+        notice.hidden = false;
+      }
+      return;
+    }
+    if (result !== CONFLICT) return;
     lost = true;
+    if (notice) {
+      notice.textContent = 'Another tab saved this collage. Download this version, or reload to use the saved version.';
+      notice.hidden = false;
+    }
     toast('Another tab saved this collage. Autosave stopped here so this tab '
         + 'cannot overwrite it. Reload to carry on in this tab.');
   }, delay);
 }
 
 /** Clearing the session releases it, so this tab may write again. */
-export function resumeSaving() { lost = false; }
+export function resumeSaving() {
+  lost = false;
+  const notice = document.querySelector('#saveNotice');
+  if (notice) notice.hidden = true;
+}

@@ -57,7 +57,7 @@ export function openEditor(photo) {
     srcData: null,                       // lazy, only the wand needs it
     color: null, colorKey: null,         // fx'd colour source, null = src
     tf: { ...photo.tf, adj: { ...photo.tf.adj } },
-    tool: 'erase', brush: 48, soft: 0.5, tol: 32,
+    tool: 'crop', brush: 48, soft: 0.5, tol: 32,
     stampCv: null, stampKey: '',
     stroke: null, pan: null, pinch: null, space: false, applying: false,
     pointers: new Map(),
@@ -87,7 +87,7 @@ export function openEditor(photo) {
 
 /** Everything behind the dialog: inert while the editor owns the page. */
 const inertTargets = () =>
-  ['.board', '.sheet-tabs', '.header-bar', '.neo-footer']
+  ['.board', '.workspace-toolbar', '.mobile-tools', '.header-bar', '.neo-footer']
     .map((s) => document.querySelector(s)).filter(Boolean);
 
 function closeEditor() {

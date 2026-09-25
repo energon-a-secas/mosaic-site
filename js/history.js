@@ -1,10 +1,8 @@
 // Undo/redo over the editable model.
 //
-// Snapshots deliberately exclude bitmaps. A dozen 12MP photos held twice per
-// history entry would exhaust memory in a handful of edits, and the pixels never
-// change anyway: what changes is order, framing, spans and layout params. So a
-// snapshot stores the arrangement and references photos by id, and restoring
-// re-attaches the live bitmaps from the pool.
+// Snapshots copy the arrangement and retain references to photos and their
+// cached pixels, never duplicate pixel buffers. This lets undo restore a
+// removed photo or cutout. References expire with the bounded history.
 
 const MAX = 60;
 let past = [], future = [], suspended = false;
@@ -14,8 +12,10 @@ function snapshot(state) {
     order: state.pool.map((p) => p.id),
     photos: state.pool.map((p) => ({
       id: p.id, span: p.span,
+      // Retain references, not copies of pixel buffers. Removed photos can be
+      // restored, and the bounded history releases them as entries expire.
+      photo: p, cut: p.cut, cutBlob: p.cutBlob, fx: p.fx, fxKey: p.fxKey, thumb: p.thumb,
       tf: { ...p.tf, adj: { ...p.tf.adj } },
-      hasCut: !!p.cut,
     })),
     overrides: [...state.overrides],
     overlays: state.overlays.map((o) => ({ ...o })),
@@ -32,18 +32,15 @@ function snapshot(state) {
 
 function restore(state, snap) {
   const byId = new Map(state.pool.map((p) => [p.id, p]));
+  for (const rec of snap.photos) byId.set(rec.id, rec.photo);
   state.pool = snap.order.map((id) => byId.get(id)).filter(Boolean);
   for (const rec of snap.photos) {
     const p = byId.get(rec.id);
     if (!p) continue;
     p.span = rec.span;
     p.tf = { ...rec.tf, adj: { ...rec.tf.adj } };
-    // A cutout is a bitmap, so it is not in the snapshot. Undoing past the point
-    // where it was made cannot resurrect it; clearing the flag is the honest
-    // outcome rather than showing a "cut" badge with nothing behind it. The
-    // blob must go too: it is what persistence writes, so leaving it would
-    // resurrect the undone cutout on the next reload.
-    if (!rec.hasCut) { p.cut = null; p.cutBlob = null; }
+    p.cut = rec.cut; p.cutBlob = rec.cutBlob;
+    p.fx = rec.fx; p.fxKey = rec.fxKey; p.thumb = rec.thumb;
   }
   state.overrides = new Map(snap.overrides);
   state.overlays = (snap.overlays || []).map((o) => ({ ...o }));

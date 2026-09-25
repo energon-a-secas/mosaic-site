@@ -29,7 +29,7 @@
 //
 // Rollback: copy sw-kill.js over this file and deploy. See CLAUDE.md.
 
-const VERSION = 'mosaic-v1';
+const VERSION = 'mosaic-v2';
 
 // PRECACHE-BEGIN  (scripts/check-precache.py --list regenerates this; it is
 // checked by `make smoke`, and nothing rewrites it automatically)
@@ -52,10 +52,12 @@ const PRECACHE = [
   '/js/editor-tools.js',
   '/js/editor.js',
   '/js/events.js',
+  '/js/export.js',
   '/js/filters.js',
   '/js/frame.js',
   '/js/gestures.js',
   '/js/history.js',
+  '/js/import.js',
   '/js/layouts.js',
   '/js/neorgon-footer.js',
   '/js/neorgon-header.js',
@@ -65,8 +67,10 @@ const PRECACHE = [
   '/js/render.js',
   '/js/state.js',
   '/js/store.js',
+  '/js/templates.js',
   '/js/tools.js',
   '/js/utils.js',
+  '/js/workspace.js',
   '/logo.svg',
   '/site.webmanifest',
 ];

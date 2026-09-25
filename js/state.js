@@ -12,8 +12,8 @@ export const state = {
   pool: [],              // Photo[] — ordered, stable ids, layout-agnostic
   overrides: new Map(),  // cellIndex -> photoId, only explicit user swaps
   layout: 'grid',
-  params: { cols: 3, gap: 12, radius: 8, pad: 24, ratio: '16:9', border: 0 },
-  background: '#0f1214',
+  params: { cols: 2, gap: 8, radius: 4, pad: 12, ratio: '16:9', border: 0 },
+  background: '#faf9f8',
   bg2: null,             // second colour: when set, the canvas is a gradient
   bgAngle: 135,          // gradient direction, degrees
   borderColor: '#ffffff',

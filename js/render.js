@@ -2,6 +2,7 @@ import { state, resolvePlacement, selectedPhoto, spansFor, selectedOverlayObj } 
 import { computeCells, aspect, USES_COLS, USES_SPAN } from './layouts.js';
 import { compose, FILTER_NAMES } from './compose.js';
 import { allMono } from './presets.js';
+import { syncWorkspace } from './workspace.js';
 
 const $ = (s) => document.querySelector(s);
 export const refs = {};
@@ -41,8 +42,8 @@ export function drawStage() {
 
   // Fit the stage to its box while keeping the chosen aspect exactly.
   const box = refs.canvas.parentElement.getBoundingClientRect();
-  const maxW = Math.max(240, box.width - 32);
-  const maxH = Math.max(200, box.height - 32);
+  const maxW = Math.max(1, box.width - 16);
+  const maxH = Math.max(1, box.height - 16);
   let W = maxW, H = W / ar;
   if (H > maxH) { H = maxH; W = H * ar; }
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -66,14 +67,22 @@ export function drawStage() {
 export function drawStrip() {
   refs.count.textContent = state.pool.length
     ? `${state.pool.length} photo${state.pool.length > 1 ? 's' : ''}`
-    : 'no photos yet';
+    : '0 photos';
+  const focused = refs.strip.contains(document.activeElement) ? document.activeElement : null;
+  const focusedId = focused?.closest('.thumb')?.dataset.id;
+  const focusedIndex = Number(focused?.closest('.thumb')?.dataset.index || 0);
+  const wasRemove = !!focused?.dataset.del;
   refs.strip.innerHTML = '';
-  state.pool.forEach((p, i) => {
+  currentPlacement(currentCells()).filter(Boolean).forEach((p, i) => {
     const li = document.createElement('li');
     li.className = 'thumb' + (state.selected === p.id ? ' is-sel' : '');
     li.draggable = true;
     li.dataset.id = p.id;
     li.dataset.index = String(i);
+    const select = document.createElement('button');
+    select.type = 'button'; select.className = 'thumb-select';
+    select.setAttribute('aria-label', `Select photo ${i + 1}: ${p.name}`);
+    select.setAttribute('aria-pressed', String(state.selected === p.id));
     const cv = document.createElement('canvas');
     cv.width = 96; cv.height = 96;
     const c = cv.getContext('2d');
@@ -81,21 +90,19 @@ export function drawStrip() {
     const s = Math.max(96 / img.width, 96 / img.height);
     c.drawImage(img, (96 - img.width * s) / 2, (96 - img.height * s) / 2,
       img.width * s, img.height * s);
-    li.appendChild(cv);
+    cv.setAttribute('aria-hidden', 'true');
+    select.appendChild(cv);
+    const label = document.createElement('span');
+    label.className = 'thumb-label'; label.textContent = `${i + 1}. ${p.name}`;
+    select.appendChild(label);
+    li.appendChild(select);
     const del = document.createElement('button');
     del.className = 'thumb-x';
     del.type = 'button';
     del.dataset.del = p.id;
     del.setAttribute('aria-label', `Remove ${p.name}`);
-    del.textContent = '×';
+    del.innerHTML = '<span aria-hidden="true">×</span>';
     li.appendChild(del);
-    const edit = document.createElement('button');
-    edit.className = 'thumb-edit';
-    edit.type = 'button';
-    edit.dataset.edit = p.id;
-    edit.setAttribute('aria-label', `Edit ${p.name}`);
-    edit.textContent = '✎';
-    li.appendChild(edit);
     if (p.cut) {
       const b = document.createElement('span');
       b.className = 'thumb-cut'; b.textContent = 'cut';
@@ -103,6 +110,12 @@ export function drawStrip() {
     }
     refs.strip.appendChild(li);
   });
+  if (focused) {
+    const thumb = [...refs.strip.children].find((el) => el.dataset.id === focusedId)
+      || refs.strip.children[Math.min(focusedIndex, refs.strip.children.length - 1)];
+    (thumb?.querySelector(wasRemove ? '[data-del]' : '.thumb-select')
+      || document.querySelector('#side [data-act="add"]')).focus({ preventScroll: true });
+  }
 }
 
 export function drawTextInspector() {
@@ -114,11 +127,13 @@ export function drawTextInspector() {
     const f = el.querySelector(`[data-o="${k}"]`);
     if (f && f.value !== String(o[k])) f.value = o[k] === 'none' ? '#000000' : o[k];
   }
-  el.querySelectorAll('[data-ofont]').forEach((b) =>
-    b.classList.toggle('is-on', b.dataset.ofont === o.font));
-  el.querySelectorAll('[data-o-align]').forEach((b) =>
-    b.classList.toggle('is-on', b.dataset.oAlign === o.align));
-  el.querySelector('[data-o-toggle="upper"]').classList.toggle('is-on', !!o.upper);
+  const pressed = (button, on) => {
+    button.classList.toggle('is-on', on);
+    button.setAttribute('aria-pressed', String(on));
+  };
+  el.querySelectorAll('[data-ofont]').forEach((b) => pressed(b, b.dataset.ofont === o.font));
+  el.querySelectorAll('[data-o-align]').forEach((b) => pressed(b, b.dataset.oAlign === o.align));
+  pressed(el.querySelector('[data-o-toggle="upper"]'), !!o.upper);
 }
 
 export function drawInspector() {
@@ -133,15 +148,20 @@ export function drawInspector() {
   set('zoom', p.tf.zoom); set('ox', p.tf.ox); set('oy', p.tf.oy); set('rot', p.tf.rot);
   refs.inspector.querySelectorAll('[data-filter]').forEach((b) => {
     b.classList.toggle('is-on', b.dataset.filter === p.tf.filter);
+    b.setAttribute('aria-pressed', String(b.dataset.filter === p.tf.filter));
   });
-  refs.inspector.querySelector('[data-flip="h"]').classList.toggle('is-on', p.tf.flipH);
-  refs.inspector.querySelector('[data-flip="v"]').classList.toggle('is-on', p.tf.flipV);
+  for (const [axis, on] of [['h', p.tf.flipH], ['v', p.tf.flipV]]) {
+    const button = refs.inspector.querySelector(`[data-flip="${axis}"]`);
+    button.classList.toggle('is-on', on);
+    button.setAttribute('aria-pressed', String(on));
+  }
   for (const k of ['bright', 'contrast', 'sat', 'temp']) {
     const el = refs.inspector.querySelector(`[data-adj="${k}"]`);
     if (el) el.value = String(p.tf.adj[k] ?? (k === 'temp' ? 0 : 100));
   }
   const heroBtn = refs.inspector.querySelector('[data-act="hero"]');
   heroBtn.classList.toggle('is-on', p.span === 2);
+  heroBtn.setAttribute('aria-pressed', String(p.span === 2));
   heroBtn.hidden = !USES_SPAN.includes(state.layout);
 }
 
@@ -156,6 +176,7 @@ export function buildFilterButtons() {
 }
 
 export function syncControls() {
+  syncWorkspace();
   document.querySelectorAll('[data-layout]').forEach((b) => {
     const on = b.dataset.layout === state.layout;
     b.classList.toggle('is-on', on);
