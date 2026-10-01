@@ -3,8 +3,7 @@
 //
 // No DOM and no canvas on purpose. compose.js and the crop editor both need
 // this maths and must agree exactly, and keeping it here means it can be tested
-// in node without a browser, which is the only automated coverage this geometry
-// gets.
+// in node without a browser, including extremes that are easy to miss visually.
 
 /**
  * The source rectangle a crop selects, in source pixels, always inside the image.
@@ -40,6 +39,29 @@ export function coverZoom(dw, dh, w, h, rot) {
   const a = (rot * Math.PI) / 180;
   const c = Math.abs(Math.cos(a)), s = Math.abs(Math.sin(a));
   return Math.max((w * c + h * s) / dw, (w * s + h * c) / dh);
+}
+
+/** Largest centred scale that keeps the whole rotated photo inside its frame. */
+export function containScale(sw, sh, w, h, rot, { mask, radius = 0 } = {}) {
+  if (mask === 'circle') return Math.min(w, h) / Math.hypot(sw, sh);
+  const a = rot * Math.PI / 180, c = Math.cos(a), s = Math.sin(a);
+  let scale = Math.min(w / (sw * Math.abs(c) + sh * Math.abs(s)),
+                       h / (sw * Math.abs(s) + sh * Math.abs(c)));
+  const r = Math.min(Math.max(0, radius), w / 2, h / 2);
+  if (!r) return scale;
+  // A rounded frame is convex, so containing all four corners contains the
+  // whole photo. Opposite corners are symmetric; check the two distinct rays.
+  for (const sign of [-1, 1]) {
+    const x = Math.abs(sw * c - sign * sh * s) / 2;
+    const y = Math.abs(sw * s + sign * sh * c) / 2;
+    const cx = w / 2 - r, cy = h / 2 - r;
+    const dx = Math.max(0, x * scale - cx), dy = Math.max(0, y * scale - cy);
+    if (!dx || !dy || dx * dx + dy * dy <= r * r) continue;
+    const norm = x * x + y * y, dot = x * cx + y * cy;
+    const discriminant = dot * dot - norm * (cx * cx + cy * cy - r * r);
+    scale = Math.min(scale, (dot + Math.sqrt(Math.max(0, discriminant))) / norm);
+  }
+  return scale;
 }
 
 /**

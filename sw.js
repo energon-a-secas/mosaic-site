@@ -29,7 +29,7 @@
 //
 // Rollback: copy sw-kill.js over this file and deploy. See CLAUDE.md.
 
-const VERSION = 'mosaic-v2';
+const VERSION = 'mosaic-v3';
 
 // PRECACHE-BEGIN  (scripts/check-precache.py --list regenerates this; it is
 // checked by `make smoke`, and nothing rewrites it automatically)

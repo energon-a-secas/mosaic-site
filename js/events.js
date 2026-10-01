@@ -2,7 +2,7 @@ import { state, addPhoto, removePhoto, movePhoto, swapCells, selectedPhoto,
          shufflePool, freshTf, addOverlay, removeOverlay, selectedOverlayObj } from './state.js';
 import { renderAll, drawStage, drawStrip, refs,
          syncHistory, syncControls } from './render.js';
-import { makeThumb, tintThumb, batchThumbnails, fitAspect } from './tools.js';
+import { makeThumb, tintThumb, batchThumbnails } from './tools.js';
 import * as H from './history.js';
 import { applyFx, fxKey, isIdentity } from './filters.js';
 import { makeText, PRESETS, FONTS } from './overlays.js';
@@ -96,7 +96,7 @@ function moveSelected(direction) {
 }
 
 export function wire() {
-  wireWorkspace({ edit, repaint, editPhoto: openEditor, moveSelected });
+  wireWorkspace({ edit, repaint, moveSelected });
   wireImport({ repaint, ready: () => sessionReady });
   wireExport({ previewWidth: () => lastFrame.W });
 
@@ -193,6 +193,14 @@ export function wire() {
   ins.addEventListener('click', async (e) => {
     const p = selectedPhoto();
     if (!p) return;
+    const fit = e.target.closest('[data-fit]');
+    if (fit) {
+      const mode = fit.dataset.fit;
+      if ((p.tf.fit || 'fill') !== mode || p.tf.zoom !== 1 || p.tf.ox || p.tf.oy) {
+        edit(() => { p.tf.fit = mode; p.tf.zoom = 1; p.tf.ox = 0; p.tf.oy = 0; });
+      }
+      return;
+    }
     const f = e.target.closest('[data-filter]');
     if (f) { edit(() => { p.tf.filter = f.dataset.filter; }); scheduleFx(p, 0); return; }
     const fl = e.target.closest('[data-flip]');
@@ -202,12 +210,10 @@ export function wire() {
       return;
     }
     const act = e.target.closest('[data-act]')?.dataset.act;
-    if (act === 'reset') { edit(() => { p.tf = freshTf(); }); scheduleFx(p, 0); }
+    if (act === 'reset') { edit(() => { p.tf = freshTf(); p.fxKey = null; }); scheduleFx(p, 0); }
     else if (act === 'editphoto') { openEditor(p); }
     else if (act === 'hero') {
       edit(() => { p.span = p.span === 2 ? 1 : 2; });
-    } else if (act === 'fit') {
-      edit(() => fitAspect(p, 1));
     }
   });
 

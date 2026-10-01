@@ -26,6 +26,9 @@ photographs. Photography supplies the visual interest.
   downloading; offer 800px, 3000px, and JPEG without another dialog.
 - New captions use a normal sans serif. Meme templates retain Impact styling.
 - The photo editor opens on Crop; background erasing is an explicit tool choice.
+- Photos fill their frames by default. Fit photo recenters and shows the whole
+  photo or chosen crop, including rotated corners. Both options reset zoom and
+  pan while preserving deliberate crops, rotation, and colour adjustments.
 
 ## Visual language
 
@@ -46,6 +49,12 @@ limited to brief state transitions and respects reduced-motion preferences.
 - Photo selection uses real buttons with labels and pressed states. Touch and
   keyboard users have Move earlier / Move later controls; desktop dragging also
   reorders the visible arrangement.
+- Adjust photo beneath the preview opens and focuses the selected photo's quick
+  controls. Fit / Fill and Replace photo come before the sliders; Open editor
+  offers detailed cropping and background removal.
+- Replacing a photo retains its slot, crop, fit mode, and colour adjustments.
+  Erasing belongs to the original image and resets on replacement. Undo restores
+  the original photo and its cutout; an unreadable replacement keeps it intact.
 - Tap selects, drag reframes, pinch or wheel zooms. A tap adds no undo entry;
   a gesture is one undoable action, saved at its end.
 - Most controls have at least 44px touch targets. Icon buttons have names.
@@ -61,3 +70,5 @@ limited to brief state transitions and respects reduced-motion preferences.
 and undo. `python3 tests/browser-smoke.py` exercises Chromium and WebKit across
 phone, landscape, tablet, and desktop sizes, including imports, downloads,
 reordering, gestures, persistence, and an offline reload.
+`tests/photo_options.py`, run by the browser suite, checks Fit against preview and
+downloaded pixels, replacement and file-picker failures, and reload preservation.

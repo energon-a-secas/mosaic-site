@@ -25,6 +25,7 @@ export const state = {
 
 export const freshTf = () => ({
   zoom: 1, ox: 0, oy: 0, rot: 0, flipH: false, flipV: false, filter: 'none',
+  fit: 'fill',
   // The crop, as fractions of the source. Four FLAT fields, not a nested
   // object: every serializer copies tf with a shallow spread and hand-copies
   // only `adj`, so a nested crop would be shared by reference into each undo
@@ -50,6 +51,19 @@ export function addPhoto({ bitmap, name, blob, id }) {
     cut: null,           // background-removed bitmap, when the user has made one
   };
   state.pool.push(photo);
+  return photo;
+}
+
+/** Keep the slot and edits, but never reuse pixels or erasing from another photo. */
+export function replacePhoto(original, { bitmap, name, blob, thumb = null }) {
+  const index = state.pool.indexOf(original);
+  if (index < 0) return null;
+  // A new object leaves the original source intact in undo snapshots and lets
+  // pending colour bakes recognise that their photo has been replaced.
+  const photo = { ...original, bitmap, name, blob, thumb,
+    tf: { ...original.tf, adj: { ...original.tf.adj } },
+    cut: null, cutBlob: null, fx: null, fxKey: null };
+  state.pool[index] = photo;
   return photo;
 }
 

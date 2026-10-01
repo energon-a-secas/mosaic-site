@@ -37,7 +37,7 @@ export function openPanel(name, { focus = false } = {}) {
   }
 }
 
-export function wireWorkspace({ edit, repaint, editPhoto, moveSelected }) {
+export function wireWorkspace({ edit, repaint, moveSelected }) {
   const presets = document.querySelector('[data-templates]');
   for (const t of TEMPLATES) {
     const button = document.createElement('button');
@@ -64,7 +64,13 @@ export function wireWorkspace({ edit, repaint, editPhoto, moveSelected }) {
   });
   document.querySelector('[data-act="editselected"]').addEventListener('click', () => {
     if (selectedOverlayObj()) openPanel('text', { focus: true });
-    else if (selectedPhoto()) editPhoto(selectedPhoto());
+    else if (selectedPhoto()) {
+      if (mobile.matches) openPanel('photos');
+      const side = document.querySelector('#side'), inspector = document.querySelector('#inspector');
+      side.scrollTop += inspector.getBoundingClientRect().top - side.getBoundingClientRect().top - 16;
+      const heading = inspector.querySelector('h2');
+      heading.tabIndex = -1; heading.focus({ preventScroll: true });
+    }
   });
   document.querySelector('#captionList').addEventListener('click', (event) => {
     const button = event.target.closest('[data-caption]');
@@ -116,7 +122,7 @@ export function syncWorkspace() {
     : 'Pick your photos. Find your layout. Make it yours.';
   document.querySelector('#photoOrder').hidden = !photo;
   document.querySelector('#selectionName').textContent = caption ? 'Caption selected' : photo?.name || '';
-  document.querySelector('[data-act="editselected"]').textContent = caption ? 'Edit text' : 'Edit photo';
+  document.querySelector('[data-act="editselected"]').textContent = caption ? 'Edit text' : 'Adjust photo';
   // Placement, not pool order, is the order a user sees after explicit swaps.
   // Events owns the actual swap and updates the disabled boundary states.
   document.querySelectorAll('#selectionActions [data-photo-move]').forEach((b) => { b.hidden = !!caption; });

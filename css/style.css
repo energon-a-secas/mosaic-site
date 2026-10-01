@@ -164,6 +164,9 @@ textarea { resize: vertical; }
 .segmented { display: flex; gap: 8px; }
 .segmented .chip { flex: 1; flex-direction: column; gap: 3px; padding: 12px; }
 .segmented small { font-size: .6875rem; font-weight: 400; }
+.photo-framing { min-width: 0; margin: 18px 0 0; padding: 0; border: 0; }
+.photo-framing legend { margin-bottom: 8px; font-size: .75rem; font-weight: 550; color: var(--t-secondary); }
+.photo-framing .segmented .chip { padding: 10px 8px; }
 .export-dimensions { font-size: .75rem; color: var(--t-secondary); margin: 12px 0 20px; font-variant-numeric: tabular-nums; }
 .toast { position: fixed; bottom: 24px; left: 50%; z-index: var(--z-toast); width: max-content; max-width: min(440px, calc(100vw - 32px)); padding: 12px 18px; border-radius: 10px; background: var(--t-primary); color: var(--s-panel); box-shadow: 0 4px 20px rgb(25 24 24 / 15%); font-size: .8125rem; line-height: 1.5; pointer-events: none; transform: translate(-50%, 8px); opacity: 0; transition: transform .18s var(--ease-out), opacity .18s var(--ease-out); }
 .toast.visible { opacity: 1; transform: translate(-50%, 0); }

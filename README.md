@@ -49,6 +49,8 @@ uploaded anywhere.
 - **Made for mobile** -- a visible preview and five clear tool tabs, with photo selection and reordering that work by touch or keyboard
 - **A useful starting point** -- two side-by-side photos on a 16:9 canvas, plus visual presets for squares, portraits, stories, stacked photos and 19:6 banners. Saved projects keep their settings
 - **Straightforward downloads** -- PNG or JPEG, three sizes, and exact output dimensions before saving
+- **Fit or fill each frame:** show the full photo or chosen crop, or fill the frame edge to edge. Works with rotation, shaped frames, undo, and saved projects
+- **Replace without rearranging:** swap a photo while keeping its slot, framing, and colour adjustments. Undo brings the original photo and any background erasing back
 - **Change the layout whenever** -- ten layouts including grid, masonry, a scatter pile and shape outlines. Your photos and their framing carry over every time
 - **Focus editor** -- open any photo full screen: erase or restore the background with soft brushes, magic-wand the colour you click, or let the automatic edge fill do the flat part. Zoom to the pixel, undo per stroke, and it all persists
 - **Black & white and colour tools** -- mono and high-contrast noir presets plus brightness, contrast, saturation and warmth, baked into pixels so they work in every browser
@@ -88,7 +90,7 @@ python3 tests/browser-smoke.py
 ```
 
 This checks Chromium and WebKit at phone, landscape, tablet, and desktop sizes,
-along with import, touch reordering, undo, captions, export, session restore,
+along with import, photo replacement, Fit/Fill rendering, touch reordering, undo, captions, export, session restore,
 and offline startup. Screenshots and downloads are written to a temporary folder.
 
 ---

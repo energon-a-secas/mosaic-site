@@ -112,6 +112,7 @@
 
   <main id="main" aria-busy="true" inert>
     <input type="file" id="file" accept="image/*" multiple hidden>
+    <input type="file" id="replacementFile" accept="image/*" hidden>
     <div class="workspace-toolbar">
       <div class="workspace-title"><h2>Your collage</h2><span class="privacy-note"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>Only on your device</span></div>
       <div class="workspace-actions">
@@ -236,7 +237,7 @@
             <span id="selectionName"></span>
             <button type="button" class="icon-button" data-photo-move="-1" aria-label="Move photo earlier"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg></button>
             <button type="button" class="icon-button" data-photo-move="1" aria-label="Move photo later"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10 6 6 6-6 6"/></svg></button>
-            <button type="button" class="chip" data-act="editselected">Edit photo</button>
+            <button type="button" class="chip" data-act="editselected">Adjust photo</button>
           </div>
         </div>
       </div>
@@ -250,8 +251,17 @@
           <h2 class="grp-t" data-ins-name>Photo</h2>
           <div class="chips" style="margin:0 0 10px">
             <button type="button" class="chip chip--primary" data-act="editphoto">Open editor</button>
+            <button type="button" class="chip" data-act="replace">Replace photo</button>
           </div>
-          <p class="hint" style="margin:0 0 10px">Drag to reframe. Pinch or use the zoom slider to get closer.</p>
+          <fieldset class="photo-framing">
+            <legend>Framing</legend>
+            <div class="segmented">
+              <button type="button" class="chip" data-fit="fill" aria-pressed="true">Fill frame</button>
+              <button type="button" class="chip" data-fit="fit" aria-pressed="false">Fit photo</button>
+            </div>
+            <p class="hint" id="framingHint">Fills the frame; some edges may be cropped.</p>
+          </fieldset>
+          <p class="hint">Drag to reframe. Pinch or use the zoom slider to get closer.</p>
           <label class="lab" for="zoom">Zoom <b data-echo="zoom"></b></label>
           <input id="zoom" type="range" min="1" max="6" step="0.01" data-tf="zoom">
           <label class="lab" for="ox">Nudge across <b data-echo="ox"></b></label>
@@ -264,7 +274,6 @@
           <div class="chips">
             <button type="button" class="chip" data-flip="h">Flip horizontal</button>
             <button type="button" class="chip" data-flip="v">Flip vertical</button>
-            <button type="button" class="chip" data-act="fit">Fit square</button>
             <button type="button" class="chip" data-act="reset">Reset photo</button>
           </div>
           <div class="chips">

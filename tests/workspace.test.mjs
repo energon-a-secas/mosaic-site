@@ -2,7 +2,7 @@
 // Run: node tests/workspace.test.mjs
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { state, addPhoto, removePhoto, resolvePlacement, swapCells } from '../js/state.js';
+import { state, addPhoto, removePhoto, replacePhoto, resolvePlacement, swapCells } from '../js/state.js';
 import { aspect, computeCells } from '../js/layouts.js';
 import { TEMPLATES, applyTemplate } from '../js/templates.js';
 import * as history from '../js/history.js';
@@ -89,4 +89,40 @@ test('touch reorder swaps the visible placement and can be undone', () => {
   assert.deepEqual(resolvePlacement(2).map((p) => p.id), [...original].reverse());
   history.undo(state);
   assert.deepEqual(resolvePlacement(2).map((p) => p.id), original);
+});
+
+test('replacement keeps placement and framing; undo restores original pixels and cutout', () => {
+  history.reset(); state.pool = []; state.overrides.clear();
+  const original = addPhoto({ bitmap: { width: 400, height: 300 }, name: 'Original', blob: {} });
+  addPhoto({ bitmap: {}, name: 'Other', blob: {} });
+  state.selected = original.id;
+  swapCells(0, 1, resolvePlacement(2));
+  original.span = 2;
+  Object.assign(original.tf, { fit: 'fit', zoom: 1.8, cx: .1, cw: .7, flipH: true, filter: 'mono' });
+  original.tf.adj.bright = 123;
+  original.cut = {}; original.cutBlob = {}; original.fx = {}; original.thumb = {};
+  const order = resolvePlacement(2).map(p => p.id);
+  const image = { bitmap: { width: 500, height: 200 }, name: 'Replacement', blob: {}, thumb: {} };
+  history.mark(state);
+  const replacement = replacePhoto(original, image);
+  assert.deepEqual(resolvePlacement(2).map(p => p.id), order);
+  assert.equal(state.selected, original.id);
+  assert.equal(replacement.span, 2);
+  assert.deepEqual(replacement.tf, original.tf);
+  assert.notEqual(replacement.tf, original.tf);
+  assert.notEqual(replacement.tf.adj, original.tf.adj);
+  assert.equal(replacement.bitmap, image.bitmap);
+  assert.equal(replacement.blob, image.blob);
+  assert.equal(replacement.cut, null);
+  assert.equal(replacement.cutBlob, null);
+  assert.equal(replacement.fx, null);
+  assert.ok(history.undo(state));
+  assert.equal(state.pool[0], original);
+  assert.equal(original.name, 'Original');
+  assert.ok(original.cut && original.cutBlob && original.fx);
+  assert.equal(original.tf.fit, 'fit');
+  assert.ok(history.redo(state));
+  assert.equal(state.pool[0], replacement);
+  assert.equal(replacement.name, 'Replacement');
+  assert.equal(replacePhoto(original, image), null, 'a stale target must not replace a different photo');
 });

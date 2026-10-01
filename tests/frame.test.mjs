@@ -1,10 +1,10 @@
 // Geometry tests for js/frame.js. No dependencies, no DOM: `node tests/frame.test.mjs`.
 //
-// This is the only automated coverage Mosaic's rendering has. It exists because
+// These checks cover framing extremes independently of the browser suite, because
 // the framing maths is the part where being subtly wrong looks like a design
 // choice rather than a bug: a cell that leaks background at 2 degrees, or a crop
 // that quietly draws at half size, both render without throwing anything.
-import { cropRect, coverZoom, panLimit } from '../js/frame.js';
+import { cropRect, coverZoom, panLimit, containScale } from '../js/frame.js';
 
 let pass = 0, fail = 0;
 const ok = (name, cond, detail = '') => {
@@ -107,6 +107,33 @@ for (let i = 0; i < 3000; i++) {
   if (lim.x > 1 && covered(dw, dh, w, h, rot, lim.x * 1.02, 0)) panWrong++;    // outside: must leak
 }
 ok('panLimit is the exact pan boundary', panWrong === 0, `${panWrong} disagreements`);
+
+// Fit must retain every corner, including in rotated and rounded frames.
+function contained(dw, dh, w, h, rot, radius = 0) {
+  const a = rot * Math.PI / 180, c = Math.cos(a), s = Math.sin(a);
+  for (const [x, y] of [[-dw/2,-dh/2], [dw/2,-dh/2], [dw/2,dh/2], [-dw/2,dh/2]]) {
+    const rx = Math.abs(x*c-y*s), ry = Math.abs(x*s+y*c);
+    if (rx > w/2 + 1e-7 || ry > h/2 + 1e-7) return false;
+    const dx = Math.max(0, rx-w/2+radius), dy = Math.max(0, ry-h/2+radius);
+    if (dx*dx + dy*dy > radius*radius + 1e-5) return false;
+  }
+  return true;
+}
+let clipped = 0, slack = 0;
+for (let i = 0; i < 4000; i++) {
+  const w = between(40, 1600), h = between(40, 1600);
+  const sw = between(200, 6000), sh = between(200, 6000), rot = between(-180, 180);
+  const radius = i % 2 ? between(0, Math.min(w, h)/2) : 0;
+  const scale = containScale(sw, sh, w, h, rot, { radius });
+  if (!contained(sw*scale, sh*scale, w, h, rot, radius)) clipped++;
+  if (contained(sw*scale*1.00001, sh*scale*1.00001, w, h, rot, radius)) slack++;
+}
+ok('fit keeps rotated photo corners inside rectangular and rounded frames', clipped === 0, `${clipped} clipped`);
+ok('fit uses the largest scale inside the frame', slack === 0, `${slack} unnecessarily small`);
+const circle = containScale(400, 300, 180, 200, 38, { mask: 'circle' });
+ok('fit contains all corners in a circular mask', Math.abs(Math.hypot(400*circle/2, 300*circle/2)-90) < 1e-9);
+ok('fit retains full landscape and portrait sources',
+  containScale(400, 200, 100, 100, 0) === .25 && containScale(200, 400, 100, 100, 0) === .25);
 
 console.log(`\n  ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

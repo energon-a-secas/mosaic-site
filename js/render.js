@@ -146,6 +146,14 @@ export function drawInspector() {
     if (el) el.value = String(v);
   };
   set('zoom', p.tf.zoom); set('ox', p.tf.ox); set('oy', p.tf.oy); set('rot', p.tf.rot);
+  refs.inspector.querySelectorAll('[data-fit]').forEach((button) => {
+    const on = button.dataset.fit === (p.tf.fit || 'fill');
+    button.classList.toggle('is-on', on);
+    button.setAttribute('aria-pressed', String(on));
+  });
+  refs.inspector.querySelector('#framingHint').textContent = p.tf.fit === 'fit'
+    ? 'Shows the full photo or chosen crop.'
+    : 'Fills the frame; some edges may be cropped.';
   refs.inspector.querySelectorAll('[data-filter]').forEach((b) => {
     b.classList.toggle('is-on', b.dataset.filter === p.tf.filter);
     b.setAttribute('aria-pressed', String(b.dataset.filter === p.tf.filter));

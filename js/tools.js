@@ -128,10 +128,3 @@ export async function batchThumbnails(pool, size, bg, onEach) {
   }
   return n;
 }
-
-/** Crop a photo to an aspect by adjusting its own zoom, non-destructively. */
-export function fitAspect(photo, cellAr) {
-  const ar = photo.bitmap.width / photo.bitmap.height;
-  photo.tf.zoom = ar > cellAr ? 1 : cellAr / ar;
-  photo.tf.ox = 0; photo.tf.oy = 0;
-}

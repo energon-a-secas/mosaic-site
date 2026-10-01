@@ -54,7 +54,7 @@ export function wireStage({ repaint, repaintStage, edit, lastFrameRef, cellAt })
       panDrag = { photo, sx: event.clientX, sy: event.clientY,
         ox: photo.tf.ox, oy: photo.tf.oy,
         cw: cell.w * rect.width, ch: cell.h * rect.height,
-        rot: cell.rot || 0, marked: false };
+        rot: (cell.rot || 0) + photo.tf.rot, marked: false };
     }
     repaint();
   });

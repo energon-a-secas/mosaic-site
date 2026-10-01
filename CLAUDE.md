@@ -42,7 +42,7 @@ size, both render without throwing anything.
 | `js/editor-input.js` | 148 | `wireInput`: editor pointer, wheel and keyboard |
 | `js/editor-crop.js` | 135 | the crop overlay: `syncCrop`, `cropDown/Move/Up`, `nudgeCrop`, `isCropped` |
 | `js/frame.js` | 57 | `cropRect`, `coverZoom`, `panLimit`: pure geometry, no DOM, tested in node |
-| `js/tools.js` | 136 | `removeBackground`, `makeThumb`, `tintThumb`, `batchThumbnails`, `fitAspect` |
+| `js/tools.js` | 129 | `removeBackground`, `makeThumb`, `tintThumb`, `batchThumbnails` |
 | `js/state.js` | 124 | `LAYOUTS`, `state`, `freshTf`, `addPhoto`, `removePhoto` |
 | `js/demos.js` | 109 | `wireDemos`: recipes over the demo art |
 | `js/store.js` | 138 | `saveSession`, `loadSession`, `resetSaveCache`, `clearSession`, `CONFLICT` |
@@ -112,6 +112,15 @@ memory-only and resets on reload.
   because a shallow spread shares a nested object. A nested crop would be shared
   by reference into each undo snapshot, so dragging a handle would rewrite
   history in place.
+- **Fit is framing, never a colour effect.** `tf.fit` defaults to `fill` for old
+  sessions; `fit` uses `containScale` on the cropped source and accounts for
+  rotation, round corners, and circular masks. It rides the same shallow `tf`
+  copies as crop and never belongs in `fxKey`.
+- **Replacement creates a new photo object with the same id.** Undo snapshots
+  retain the original object's source pixels, blob, and cutout. Mutating its
+  bitmap/blob/name in place would destroy that history. Async decoding checks
+  the captured object is still in the pool before replacing; stale colour bakes
+  also use object identity to avoid affecting its replacement.
 - **`fxKey` cannot see framing, so the editor's dirty check has its own
   predicate.** `framingChanged` in `js/editor.js` is what makes Escape warn
   before discarding a crop-only edit; without it `js/editor-input.js` reads such

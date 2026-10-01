@@ -13,6 +13,7 @@ from pathlib import Path
 import struct
 import tempfile
 from playwright.sync_api import sync_playwright
+from photo_options import check_photo_options
 
 BASE = os.environ.get('MOSAIC_URL', 'http://localhost:8867')
 ARTIFACTS = Path(tempfile.mkdtemp(prefix='mosaic-smoke-'))
@@ -142,6 +143,7 @@ def run_flow(browser, engine):
     select_panel(page, 'photos')
     page.locator('.thumb-select').first.click()
     page.locator('[data-act="editselected"]').click()
+    page.locator('[data-act="editphoto"]').click()
     assert page.locator('#editor').is_visible()
     assert page.evaluate("document.querySelector('.mobile-tools').inert && document.querySelector('.workspace-toolbar').inert")
     done = page.locator('[data-ed="done"]').bounding_box()
@@ -209,7 +211,7 @@ def check_offline(browser):
     page.wait_for_function('navigator.serviceWorker.controller !== null')
     page.wait_for_function("document.querySelectorAll('[data-template]').length === 6")
     # The install promise completes only after every local precache entry.
-    assert page.evaluate("async()=> {const cache=await caches.open('mosaic-v2'); return !!(await cache.match('/js/workspace.js'))}")
+    assert page.evaluate("async()=> {const cache=await caches.open('mosaic-v3'); return !!(await cache.match('/js/workspace.js'))}")
     context.set_offline(True)
     page.reload(wait_until='load')
     page.wait_for_function("document.querySelectorAll('[data-template]').length === 6 && !document.querySelector('#main').inert")
@@ -271,6 +273,7 @@ with sync_playwright() as playwright:
         browser = getattr(playwright, engine).launch()
         try:
             run_flow(browser, engine)
+            check_photo_options(browser, engine, BASE, ARTIFACTS)
             check_storage(browser, engine)
             if engine == 'chromium':
                 check_offline(browser)
