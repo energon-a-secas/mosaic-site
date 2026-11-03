@@ -392,5 +392,5 @@ body.editor-open { overflow: hidden; }
   .rail, .side { grid-column: 2; grid-row: 1; }
 }
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+  *, *::before, *::after { animation-duration: .01ms !important; transition: none !important; scroll-behavior: auto !important; }
 }
